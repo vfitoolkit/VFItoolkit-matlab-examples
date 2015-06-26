@@ -11,9 +11,8 @@ tic;
 Javier=0;   %If you set this parameter to 0 then the parameters will all be set to those used by Aldrich, Fernandez-Villaverde, Gallant, & Rubio-Ramirez (2011)
 
 %% Set up
-tauchenoptions.parallel=2;
-vfoptions.returnmatrix=2;
-vfoptions.parallel=2;
+tauchenoptions.parallel=2; % Use GPU (is anyway the default option)
+vfoptions.parallel=2; % Use GPU (is anyway the default option)
 
 % The sizes of the grids
 n_z=2^2;
@@ -38,8 +37,8 @@ if Javier==0
     rho=0.95;
     sigma_epsilon=0.005;
     sigmasq_epsilon=sigma_epsilon^2;
-    vfoptions.tolerance=(1-beta)*10^(-8);
-    vfoptions.howards=20;
+    vfoptions.tolerance=(1-beta)*10^(-8); % Toolkit default is 10^(-9)
+    vfoptions.howards=20; % Toolkit default is 80
 end
 
 %% Compute the steady state
@@ -63,7 +62,7 @@ ReturnFnParams=[gamma, alpha, delta]; %It is important that these are in same or
 %Do the value function iteration. Returns both the value function itself,
 %and the optimal policy function.
 d_grid=0; %no d variable
-n_d=0;
+n_d=0; %no d variable
 
 
 V0=ones(n_k,n_z,'gpuArray');
