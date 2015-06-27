@@ -50,7 +50,7 @@ X_ss= delta*K_ss;
 %% Create grids (grids are defined as a column vectors)
 
 q=3; % A parameter needed for the Tauchen Method
-[z_grid, pi_z]=TauchenMethod_Param(0,sigmasq_epsilon,rho,n_z,q,tauchenoptions); %[states, transmatrix]=TauchenMethod_Param(mew,sigmasq,rho,znum,q), transmatix is (z,zprime)
+[z_grid, pi_z]=TauchenMethod(0,sigmasq_epsilon,rho,n_z,q,tauchenoptions); %[states, transmatrix]=TauchenMethod_Param(mew,sigmasq,rho,znum,q), transmatix is (z,zprime)
 
 k_grid=linspace(0,20*K_ss,n_k)'; % Grids should always be declared as column vectors
 

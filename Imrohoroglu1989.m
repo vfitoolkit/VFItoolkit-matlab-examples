@@ -18,7 +18,6 @@ tauchenoptions.parallel=Parallel;
 mcmomentsoptions.parallel=tauchenoptions.parallel;
 
 vfoptions.parallel=Parallel;
-vfoptions.returnmatrix=Parallel;
 
 simoptions.parallel=Parallel;
 

@@ -5,7 +5,6 @@ UseAlternativeParams=1;
 
 %% Set up
 tauchenoptions.parallel=2;
-vfoptions.returnmatrix=2;
 vfoptions.parallel=2;
 
 %Aruoba, Fernandez-Villaverde, & Rubio-Ramirez (2006) use 40 points for z and 25000 points for a (they use functional maximization so have no d grid).
@@ -39,7 +38,7 @@ K_ss=Psi/(Omega+varphi*Psi);
 
 
 %% Create grids (it is very important that each grid is defined as a column vector)
-[z_grid, pi_z]=TauchenMethod_Param(0,sigmasq_epsilon,rho,n_z,q,tauchenoptions); %[states, transmatrix]=TauchenMethod_Param(mew,sigmasq,rho,znum,q,Parallel,Verbose), transmatix is (z,zprime)
+[z_grid, pi_z]=TauchenMethod(0,sigmasq_epsilon,rho,n_z,q,tauchenoptions); %[states, transmatrix]=TauchenMethod_Param(mew,sigmasq,rho,znum,q,Parallel,Verbose), transmatix is (z,zprime)
 
 a_grid=linspace(0.01,5*K_ss,n_a)';
 d_grid=linspace(0,1,n_d)';

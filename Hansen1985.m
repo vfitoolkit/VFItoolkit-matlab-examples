@@ -12,11 +12,9 @@ n_d=21;
 Parallel=2; % Use GPU
 
 tauchenoptions.parallel=Parallel;
-
 mcmomentsoptions.parallel=tauchenoptions.parallel;
 
 vfoptions.parallel=Parallel;
-vfoptions.returnmatrix=Parallel;
 
 simoptions.parallel=Parallel;
 
@@ -37,7 +35,7 @@ K_ss=((alpha*beta)/(1-beta*(1-delta)))^(1/(1-alpha));
 %Create grids (it is very important that each grid is defined as a column
 %vector)
 q=3;
-[z_grid, pi_z]=TauchenMethod_Param(0,sigmasq_epsilon,rho,n_z,q,tauchenoptions);
+[z_grid, pi_z]=TauchenMethod(0,sigmasq_epsilon,rho,n_z,q,tauchenoptions);
 a_grid=linspace(0,2*K_ss,n_a)';
 d_grid=linspace(0,1,n_d)';
 
