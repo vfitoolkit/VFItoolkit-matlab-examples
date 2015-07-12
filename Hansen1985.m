@@ -3,8 +3,21 @@
 % discretization of the shock process [AR(1) shock with log-normal
 % innovations means standard methods cannot be used].
 n_d=51;  % decide whether to work
-n_a=751; % assets
-n_z=51;  % tech shock
+n_a=501; % assets
+n_z=31;  % tech shock
+% n_d=21;  % decide whether to work
+% n_a=201; % assets
+% n_z=11;  % tech shock
+
+%% Setup for server
+addpath(genpath('./MatlabToolkits/'))
+% try % Server has 16 cores, but is shared, so use max of 8.
+%     PoolDetails=parpool(8)
+% catch % Desktop has less than 8, so will give error, on desktop it is fine to use all available cores.
+%     PoolDetails=parpool
+% end
+% %PoolDetails=gcp;
+% NCores=PoolDetails.NumWorkers;
 
 %% Some Toolkit options
 Parallel=2; % Use GPU
@@ -76,9 +89,9 @@ a_grid=gpuArray(a_grid);
 d_grid=gpuArray(d_grid);
 pi_z=gpuArray(pi_z);
 
-n_z=length(z_grid);
-n_a=length(a_grid);
-n_d=length(d_grid);
+% n_z=length(z_grid);
+% n_a=length(a_grid);
+% n_d=length(d_grid);
 
 ReturnFn=@(d_val, aprime_val, a_val, z_val, alpha, delta, A, B, Economy) Hansen1985_ReturnFn(d_val, aprime_val, a_val, z_val, alpha, delta, A, B, Economy);
 ReturnFnParams=[alpha, delta, A, B, 0]; % The zero is later replaced with Economy.
@@ -101,10 +114,14 @@ for Economy=1:2 % Divisible and Indivisible labour respectively
     %SteadyStateDist=SteadyState_Case1(SteadyStateDist,Policy,n_d,n_a,n_z,pi_z,simoptions);
     %plot(1:1:n_z, N/sum(N), 1:1:n_z, sum(SteadyStateDist,1)) % Can see that the z discretization is working as two lines are identical.
     
-    
+    if Economy==1
+        save ./SavedOutput/Hansen1985_Economy1.mat V Policy
+    elseif Economy==2
+        save ./SavedOutput/Hansen1985_Economy2.mat V Policy
+    end
     %% Generate Table 1 of Hansen (1985)
     
-    for ii=NSims
+    for ii=1:NSims
         TimeSeriesIndexes=SimTimeSeriesIndexes_Case1(Policy,n_d,n_a,n_z,pi_z,simoptions);
         
         %Define the functions which we wish to create time series for (from the TimeSeriesIndexes)
@@ -114,21 +131,23 @@ for Economy=1:2 % Divisible and Indivisible labour respectively
         TimeSeriesFn_4 = @(d_val,aprime_val,a_val,z_val) a_val; %Capital Stock
         TimeSeriesFn_5 = @(d_val,aprime_val,a_val,z_val) d_val; %Hours
         TimeSeriesFn_6 = @(d_val,aprime_val,a_val,z_val) (z_val*(a_val^alpha)*(d_val^(1-alpha)))/d_val; %Productivity (measured in data as output divided by hours)
-        TimeSeriesFn_7 = @(d_val,aprime_val,a_val,z_val) z_val; %Tech Shock
+        TimeSeriesFn_7 = @(d_val,aprime_val,a_val,z_val) z_val; %Tech Shock (Hansen 1985 does not report this, just for interest)
         
         
-        TimeSeriesFn={TimeSeriesFn_1, TimeSeriesFn_2, TimeSeriesFn_3, TimeSeriesFn_4, TimeSeriesFn_5, TimeSeriesFn_6, TimeSeriesFn_6};
+        TimeSeriesFn={TimeSeriesFn_1, TimeSeriesFn_2, TimeSeriesFn_3, TimeSeriesFn_4, TimeSeriesFn_5, TimeSeriesFn_6, TimeSeriesFn_7};
         
         TimeSeries=TimeSeries_Case1(TimeSeriesIndexes,Policy, TimeSeriesFn, n_d, n_a, n_z, d_grid, a_grid, z_grid,simoptions);
         
-        for jj=1:6
-            temp=cov(log(TimeSeries(1,:)),log(TimeSeries(jj,:))); % To match treatment of data there is no need to seasonally adjust or detrend (no trend in model), but do need to log.
+        [OutputTrend,OutputCyc]=hpfilter(gather(log(TimeSeries(1,:))),1600); % hpfilter() does not yet exist for gpu
+        for jj=1:7
+            [TimeSeriesTrend,TimeSeriesCyc]=hpfilter(gather(log(TimeSeries(jj,:))),1600); % hpfilter() does not yet exist for gpu
+            temp=cov(100*OutputCyc,100*TimeSeriesCyc); % To match treatment of data the model output must be logged and then hpfiltered, then multiply by 100 to express as percent
             StdBusCycleStats(1,jj,Economy,ii)=sqrt(temp(2,2)); % Std dev (column a)
             StdBusCycleStats(2,jj,Economy,ii)=temp(1,2)/(sqrt(temp(1,1))*sqrt(temp(2,2))); % Correlation with output (column b)
         end
     end
-    StdBusCycleStats_means=100*mean(StdBusCycleStats,4); % multiply by 100 to make them percents)
-    StdBusCycleStats_stddev=100*std(StdBusCycleStats,0,4);
+    StdBusCycleStats_means=mean(StdBusCycleStats,4); % multiply by 100 to make them percents
+    StdBusCycleStats_stddev=std(StdBusCycleStats,0,4);
     
 end
 
