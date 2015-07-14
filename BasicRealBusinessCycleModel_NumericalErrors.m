@@ -39,13 +39,13 @@ simoptions.simperiods=500;
 simoptions.parallel=2;
 HistBins=500;
 
-SteadyStateDist=zeros(n_a,n_z,NSims,'gpuArray');
+StationaryDist=zeros(n_a,n_z,NSims,'gpuArray');
 for ii=1:NSims
-    SteadyStateDist(:,:,ii)=SteadyState_Case1_Simulation(Policy,n_d,n_a,n_z,pi_z,simoptions);
+    StationaryDist(:,:,ii)=StationaryDist_Case1_Simulation(Policy,n_d,n_a,n_z,pi_z,simoptions);
 end
 
 %Judging from the y-axes of the Figures it appears the 'densities' are calculated as histograms formed by summing across all of the simulations.
-SteadyStateHist=sum(SteadyStateDist,3)*simoptions.simperiods; %Multiply by SimPeriods as otherwise they are the actual densities being summed
+SteadyStateHist=sum(StationaryDist,3)*simoptions.simperiods; %Multiply by SimPeriods as otherwise they are the actual densities being summed
 CapitalSteadyStateHist=zeros(n_a,1,'gpuArray');
 OutputSteadyStateHist=zeros(HistBins,1,'gpuArray');
 ConsumptionSteadyStateHist=zeros(HistBins,1,'gpuArray');
