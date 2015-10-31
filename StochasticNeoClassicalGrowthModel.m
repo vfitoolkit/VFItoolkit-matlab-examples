@@ -5,9 +5,6 @@
 % This model is also used by Aldrich, Fernandez-Villaverde, Gallant, & Rubio-Ramirez (2011) - "Tapping the supercomputer under your desk: Solving dynamic equilibrium models with graphics processors,"
 % But they do use slightly different parameters to those used here.
 
-
-tic;
-
 Javier=0;   %If you set this parameter to 0 then the parameters will all be set to those used by Aldrich, Fernandez-Villaverde, Gallant, & Rubio-Ramirez (2011)
 
 %% Set up
@@ -21,7 +18,7 @@ n_k=2^12;
 %Discounting rate
 beta = 0.96;
 
-%Give the arameter values
+%Give the parameter values
 alpha = 0.33;
 gamma=1; %gamma=1 is log-utility
 rho = 0.95;
@@ -41,6 +38,15 @@ if Javier==0
     vfoptions.howards=20; % Toolkit default is 80
 end
 
+% The toolkit uses a 'structure' called Params to store the parameter values. 
+% In this basic model this will appear over-complicated, but in more advanced models it is much simpler and more useful.
+Params=CreateParamsStrucFromParamsVec({'alpha','beta','gamma','rho','delta','sigmasq_epsilon'}, [alpha,beta,gamma,rho,delta,sigmasq_epsilon]);
+% Rather than use this command you could create all the parameters in this
+% form initially, namely instead of
+% alpha = 0.33;
+% You would use
+% Params.alpha= 0.33;
+
 %% Compute the steady state
 K_ss=((alpha*beta)/(1-beta*(1-delta)))^(1/(1-alpha));
 X_ss= delta*K_ss;
@@ -56,7 +62,7 @@ k_grid=linspace(0,20*K_ss,n_k)'; % Grids should always be declared as column vec
 
 %% Now, create the return function
 ReturnFn=@(aprime_val, a_val, s_val, gamma, alpha, delta) StochasticNeoClassicalGrowthModel_ReturnFn(aprime_val, a_val, s_val, gamma, alpha, delta);
-ReturnFnParams=[gamma, alpha, delta]; %It is important that these are in same order as they appear in 'StochasticNeoClassicalGrowthModel_ReturnFn'
+ReturnFnParams={'gamma', 'alpha', 'delta'}; %It is important that these are in same order as they appear in 'StochasticNeoClassicalGrowthModel_ReturnFn'
 
 %% Solve
 %Do the value function iteration. Returns both the value function itself,
@@ -64,9 +70,9 @@ ReturnFnParams=[gamma, alpha, delta]; %It is important that these are in same or
 d_grid=0; %no d variable
 n_d=0; %no d variable
 
-
-V0=ones(n_k,n_z,'gpuArray');
-[V, Policy]=ValueFnIter_Case1(V0, n_d,n_k,n_z,d_grid,k_grid,z_grid, pi_z, beta, ReturnFn, vfoptions, ReturnFnParams);
+tic;
+V0=ones(n_k,n_z);
+[V, Policy]=ValueFnIter_Case1(V0, n_d,n_k,n_z,d_grid,k_grid,z_grid, pi_z, beta, ReturnFn, vfoptions, Params, ReturnFnParams);
 time=toc;
 
 fprintf('Time to solve the value function iteration was %8.2f seconds. \n', time)
