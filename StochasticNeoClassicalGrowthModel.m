@@ -61,8 +61,10 @@ q=3; % A parameter needed for the Tauchen Method
 k_grid=linspace(0,20*K_ss,n_k)'; % Grids should always be declared as column vectors
 
 %% Now, create the return function
+DiscountFactorParamNames={'beta'};
+
 ReturnFn=@(aprime_val, a_val, s_val, gamma, alpha, delta) StochasticNeoClassicalGrowthModel_ReturnFn(aprime_val, a_val, s_val, gamma, alpha, delta);
-ReturnFnParams={'gamma', 'alpha', 'delta'}; %It is important that these are in same order as they appear in 'StochasticNeoClassicalGrowthModel_ReturnFn'
+ReturnFnParamNames={'gamma', 'alpha', 'delta'}; %It is important that these are in same order as they appear in 'StochasticNeoClassicalGrowthModel_ReturnFn'
 
 %% Solve
 %Do the value function iteration. Returns both the value function itself,
@@ -72,7 +74,7 @@ n_d=0; %no d variable
 
 tic;
 V0=ones(n_k,n_z);
-[V, Policy]=ValueFnIter_Case1(V0, n_d,n_k,n_z,d_grid,k_grid,z_grid, pi_z, beta, ReturnFn, vfoptions, Params, ReturnFnParams);
+[V, Policy]=ValueFnIter_Case1(V0, n_d,n_k,n_z,d_grid,k_grid,z_grid, pi_z, DiscountFactorParamNames, ReturnFn, vfoptions, Params, ReturnFnParamNames);
 time=toc;
 
 fprintf('Time to solve the value function iteration was %8.2f seconds. \n', time)
