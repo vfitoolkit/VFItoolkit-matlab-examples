@@ -80,7 +80,7 @@ elseif vfoptions.exoticpreferences==0
     DiscountFactorParamNames={'beta'};
 end
 
-ReturnFn =@(l,kprime,k,z,zeta,delta,upsilon) EpsteinZinPreferences_FmatrixFn(l,kprime,k,z,zeta, delta, upsilon);
+ReturnFn =@(l,kprime,k,z,zeta,delta,upsilon) EpsteinZinPreferences_ReturnFn(l,kprime,k,z,zeta, delta, upsilon);
 ReturnFnParamNames={'zeta','delta','upsilon'};
 
 
@@ -100,9 +100,7 @@ k_grid=sort([linspace(3/4*k_ss,1.5*k_ss,ceil(n_k/3)),linspace(k_ss/2,2*k_ss,floo
 
 %My methods also require a grid for labour supply l
 l_grid=linspace(0.1,0.65,n_l)'; % In theory you might prefer to use 0 to 1, but a quick investigation shows anything outside this range would be wasted  (investigation shows=solve with 0 to 1, look at actual policy function)
-if vfoptions.lowmemory==1
-    l_grid=linspace(0,1,n_l)';
-end
+%l_grid=linspace(0,1,n_l)';
 
 d_grid=l_grid;
 a_grid=k_grid;
@@ -221,7 +219,7 @@ Table=[BusCycStats_means(1), BusCycStats_means(4), BusCycStats_means(5), nan, 10
     BusCycStats_var(1), BusCycStats_var(4), BusCycStats_var(5),nan, BusCycStats_var(6)]
 
 %% Save all of the parts that relate to output
-save ./SavedOutput/CaldaraFVillaverdeRRamirezYao2012.mat k_grid sigma_grid V Policy PolicyMatrix_c PolicyMatrix_l PolicyMatrix_kprime midpointofs midpointsofz k_ss_index TimeSeries Table
+%save ./SavedOutput/CaldaraFVillaverdeRRamirezYao2012.mat k_grid sigma_grid V Policy PolicyMatrix_c PolicyMatrix_l PolicyMatrix_kprime midpointofs midpointsofz k_ss_index TimeSeries Table
 
 
 
