@@ -1,4 +1,9 @@
-% Example based on Aiyagari (1994)
+% Example based on Aiyagari (1994).
+
+% These codes set up and solve the Aiyagari (1994) model for a given
+% parametrization. After solving the model they then show how some of the
+% vfitoolkit commands to easily calculate things like the Gini coefficient
+% for income, and how to plot the distribution of asset holdings.
 
 Parallel=2 %GPU
 
