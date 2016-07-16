@@ -14,10 +14,10 @@ BasicRealBusinessCycleModel
 % The rest of the code reproduces some relevant parts of the Figures and Tables of Aruoba, Fernanadez-Villaverde, & Rubio-Ramirez (2006).
 
 % The following four are used later as defining the areas relevant for graphs (and for Euler eqn errors)
-[trash,point7K_ss]=max(a_grid>0.7*K_ss);
-[trash,onepoint3K_ss]=max(a_grid>1.3*K_ss);
-[trash,zlow]=max(z_grid>-0.065);
-[trash,zhigh]=max(z_grid>0.065);
+[~,point7K_ss]=max(a_grid>0.7*K_ss);
+[~,onepoint3K_ss]=max(a_grid>1.3*K_ss);
+[~,zlow]=max(z_grid>-0.065);
+[~,zhigh]=max(z_grid>0.065);
 
 %% The Policy Functions
 AFVRR2006_figs=figure;

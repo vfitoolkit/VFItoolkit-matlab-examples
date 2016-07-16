@@ -133,7 +133,7 @@ plot(sort(s_grid))
 vfoptions.howards=20;
 vfoptions.verbose=1;
 V0=zeros(n_a,n_s,'gpuArray');
-[V, Policy]=ValueFnIter_Case1(V0, n_d,n_a,n_s,d_grid,a_grid,s_grid, pi_s, DiscountFactorParamNames, ReturnFn, vfoptions,Params,ReturnFnParamNames);
+[V, Policy]=ValueFnIter_Case1(V0, n_d,n_a,n_s,d_grid,a_grid,s_grid, pi_s, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames, vfoptions);
 
 %% Generate output based on the solution
 

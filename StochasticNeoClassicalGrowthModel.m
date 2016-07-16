@@ -18,34 +18,29 @@ n_k=2^12;
 %Discounting rate
 beta = 0.96;
 
-%Give the parameter values
-alpha = 0.33;
-gamma=1; %gamma=1 is log-utility
-rho = 0.95;
-delta = 0.10;
-sigmasq_epsilon=0.09;
+%Give the parameter values (Params will be a 'structure' containing all the parameter values)
+Params.alpha = 0.33;
+Params.gamma=1; %gamma=1 is log-utility
+Params.rho = 0.95;
+Params.delta = 0.10;
+Params.sigmasq_epsilon=0.09;
 
 if Javier==0
     n_z=4;
-    beta=0.984;
-    gamma=2;
-    alpha=0.35;
-    delta=0.01;
-    rho=0.95;
-    sigma_epsilon=0.005;
-    sigmasq_epsilon=sigma_epsilon^2;
+    Params.beta=0.984;
+    Params.gamma=2;
+    Params.alpha=0.35;
+    Params.delta=0.01;
+    Params.rho=0.95;
+    Params.sigma_epsilon=0.005;
+    Params.sigmasq_epsilon=Params.sigma_epsilon^2;
     vfoptions.tolerance=(1-beta)*10^(-8); % Toolkit default is 10^(-9)
     vfoptions.howards=20; % Toolkit default is 80
 end
 
-% The toolkit uses a 'structure' called Params to store the parameter values. 
-% In this basic model this will appear over-complicated, but in more advanced models it is much simpler and more useful.
-Params=CreateParamsStrucFromParamsVec({'alpha','beta','gamma','rho','delta','sigmasq_epsilon'}, [alpha,beta,gamma,rho,delta,sigmasq_epsilon]);
-% Rather than use this command you could create all the parameters in this
-% form initially, namely instead of
-% alpha = 0.33;
-% You would use
-% Params.alpha= 0.33;
+% Params has been created as a structure. You can create the individual
+% parameters from the structure by running the following command
+CreateIndividualParams(Params)
 
 %% Compute the steady state
 K_ss=((alpha*beta)/(1-beta*(1-delta)))^(1/(1-alpha));
@@ -74,13 +69,14 @@ n_d=0; %no d variable
 
 tic;
 V0=ones(n_k,n_z);
-[V, Policy]=ValueFnIter_Case1(V0, n_d,n_k,n_z,d_grid,k_grid,z_grid, pi_z, DiscountFactorParamNames, ReturnFn, vfoptions, Params, ReturnFnParamNames);
+[V, Policy]=ValueFnIter_Case1(V0, n_d,n_k,n_z,d_grid,k_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames, vfoptions);
 time=toc;
 
 fprintf('Time to solve the value function iteration was %8.2f seconds. \n', time)
 
 
 %% Draw a graph of the value function
+
 %surf(V)
 
 % Or to get 'nicer' x and y axes use
