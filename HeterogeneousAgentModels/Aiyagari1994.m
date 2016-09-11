@@ -150,7 +150,7 @@ Params.w=(1-Params.alpha)*((p_eqm+Params.delta)/Params.alpha)^(Params.alpha/(Par
 
 disp('Calculating various equilibrium objects')
 Params.r=p_eqm;
-[~,Policy]=ValueFnIter_Case1(V0, n_d,n_a,n_s,d_grid,a_grid,s_grid, pi_s, DiscountFactorParamNames, ReturnFn,vfoptions,Params,ReturnFnParamNames);
+[~,Policy]=ValueFnIter_Case1(V0, n_d,n_a,n_s,d_grid,a_grid,s_grid, pi_s, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames, vfoptions);
 
 % PolicyValues=PolicyInd2Val_Case1(Policy,n_d,n_a,n_s,d_grid,a_grid, Parallel);
 
