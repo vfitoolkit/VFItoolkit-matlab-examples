@@ -116,7 +116,7 @@ SSvaluesFn={SSvaluesFn_1};
     %the market is to clearing.
 %Note: length(AggVars) is number_d_vars+number_a_vars and length(p) is number_p_vars
 MarketPriceParamNames={'alpha','delta'};
-MarketPriceEqn_1 = @(AggVars,p,params) params(1)*(AggVars^(params(1)-1))*(Expectation_l^(1-params(1)))-params(2); %The requirement that the interest rate corresponds to the agg capital level
+MarketPriceEqn_1 = @(AggVars,p,params) p-(params(1)*(AggVars^(params(1)-1))*(Expectation_l^(1-params(1)))-params(2)); %The requirement that the interest rate corresponds to the agg capital level
 MarketPriceEqns={MarketPriceEqn_1};
 
 disp('sizes')
