@@ -37,7 +37,7 @@ Params.q=3; %Footnote 33 of Aiyagari(1993WP, pg 25) implicitly says that he uses
 % parameters from the structure by running the following command
 CreateIndividualParams(Params)
 
-%% Some Toolkit options
+%% Some Toolkit options (most of these are anyway just being set to toolkit defaults)
 tauchenoptions.parallel=Parallel;
 
 mcmomentsoptions.T=10^4;
