@@ -106,18 +106,17 @@ n_a=n_k;
 %Create descriptions of SS values as functions of d_grid, a_grid, s_grid &
 %pi_s (used to calculate the integral across the SS dist fn of whatever
 %functions you define here)
-SSvalueParamNames={};
-SSvaluesFn_1 = @(aprime_val,a_val,s_val,p_val) a_val; %We just want the aggregate assets (which is this periods state)
+SSvalueParamNames(1).Names={};
+SSvaluesFn_1 = @(aprime_val,a_val,s_val) a_val; %We just want the aggregate assets (which is this periods state)
 SSvaluesFn={SSvaluesFn_1};
 
 %Now define the functions for the Market Clearance conditions
     %Should be written as LHS of market clearance eqn minus RHS, so that 
     %the closer the value given by the function is to zero, the closer 
     %the market is to clearing.
-%Note: length(AggVars) is number_d_vars+number_a_vars and length(p) is number_p_vars
-MarketPriceParamNames={'alpha','delta'};
-MarketPriceEqn_1 = @(AggVars,p,params) p-(params(1)*(AggVars^(params(1)-1))*(Expectation_l^(1-params(1)))-params(2)); %The requirement that the interest rate corresponds to the agg capital level
-MarketPriceEqns={MarketPriceEqn_1};
+MarketClearanceParamNames(1).Names={'alpha','delta'};
+MarketClearanceEqn_1 = @(AggVars,p,alpha,delta) p-(alpha*(AggVars^(alpha-1))*(Expectation_l^(1-alpha))-delta); %The requirement that the interest rate corresponds to the agg capital level
+MarketClearanceEqns={MarketClearanceEqn_1};
 
 disp('sizes')
 n_a
@@ -147,7 +146,7 @@ V0=ones(n_a,n_s,'gpuArray'); %(a,s)
 Params.alpha=0.36;
 
 disp('Calculating price vector corresponding to the initial stationary eqm')
-[p_eqm_init,~,MarketClearance]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, SSvaluesFn, MarketPriceEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, MarketPriceParamNames, PriceParamNames); %,heteroagentoptions, simoptions, vfoptions);
+[p_eqm_init,~,MarketClearance]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, SSvaluesFn, MarketClearanceEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, MarketClearanceParamNames, PriceParamNames); %,heteroagentoptions, simoptions, vfoptions);
 
 p_eqm_init
 
@@ -158,7 +157,7 @@ StationaryDist_init=StationaryDist_Case1(Policy_init,n_d,n_a,n_s,pi_s);
 
 % Double check some things
 SSvalues_AggVars_init=SSvalues_AggVars_Case1(StationaryDist_init, Policy_init, SSvaluesFn, Params, SSvalueParamNames, n_d, n_a, n_s, d_grid, a_grid, s_grid, pi_s,p_eqm_init,2); % The 2 is for Parallel (use GPU)
-MarketClearance_init=real(MarketClearance_Case1(SSvalues_AggVars_init,p_eqm_init, MarketPriceEqns, Params, MarketPriceParamNames));
+MarketClearance_init=real(MarketClearance_Case1(SSvalues_AggVars_init,p_eqm_init, MarketClearanceEqns, Params, MarketClearanceParamNames));
 
 [MarketClearance, MarketClearance_init]
 
@@ -168,7 +167,7 @@ Params.alpha=0.4;
 % Note: if the change in parameters affected pi_s this would need to be recalculated here.
 
 disp('Calculating price vector corresponding to the final stationary eqm')
-[p_eqm_final,~,MarketClearance]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, SSvaluesFn, MarketPriceEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, MarketPriceParamNames, PriceParamNames); %,heteroagentoptions, simoptions, vfoptions);
+[p_eqm_final,~,MarketClearance]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, SSvaluesFn, MarketClearanceEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, MarketClearanceParamNames, PriceParamNames); %,heteroagentoptions, simoptions, vfoptions);
 
 p_eqm_final
 
@@ -178,15 +177,15 @@ Params.r=p_eqm_final;
 
 StationaryDist_final=StationaryDist_Case1(Policy_final,n_d,n_a,n_s,pi_s);
 SSvalues_AggVars_final=SSvalues_AggVars_Case1(StationaryDist_final, Policy_final, SSvaluesFn, Params, SSvalueParamNames, n_d, n_a, n_s, d_grid, a_grid, s_grid, pi_s,p_eqm_final,2); % The 2 is for Parallel (use GPU)
-MarketClearance_final=real(MarketClearance_Case1(SSvalues_AggVars_final,p_eqm_final, MarketPriceEqns, Params, MarketPriceParamNames));
+MarketClearance_final=real(MarketClearance_Case1(SSvalues_AggVars_final,p_eqm_final, MarketClearanceEqns, Params, MarketClearanceParamNames));
 
 [MarketClearance, MarketClearance_final]
 
 % Alternatively, you could use the p_grid option
 n_p=101; p_grid=linspace(p_eqm_final-0.01,p_eqm_final+0.01,n_p); heteroagentoptions.pgrid=p_grid;
-[p_eqm2,p_eqm_index2,MarketClearanceVec2]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, SSvaluesFn, MarketPriceEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, MarketPriceParamNames, PriceParamNames,heteroagentoptions); %, simoptions, vfoptions);
+[p_eqm2,p_eqm_index2,MarketClearanceVec2]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, SSvaluesFn, MarketClearanceEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, MarketClearanceParamNames, PriceParamNames,heteroagentoptions); %, simoptions, vfoptions);
 p_grid2=linspace(p_grid(p_eqm_index2-5),p_grid(p_eqm_index2+5),n_p); heteroagentoptions.pgrid=p_grid2;
-[p_eqm3,p_eqm_index3,MarketClearanceVec3]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, SSvaluesFn, MarketPriceEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, MarketPriceParamNames, PriceParamNames,heteroagentoptions); %, simoptions, vfoptions);
+[p_eqm3,p_eqm_index3,MarketClearanceVec3]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, SSvaluesFn, MarketClearanceEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, MarketClearanceParamNames, PriceParamNames,heteroagentoptions); %, simoptions, vfoptions);
 
 [p_eqm_final, p_eqm2, p_eqm3]
 
@@ -214,7 +213,7 @@ PricePathNames={'r'};
 % initial and final equilibria)
 transpathoptions.weightscheme=1
 transpathoptions.verbose=1
-[PricePathNew]=TransitionPath_Case1(PricePath0, PricePathNames, ParamPath, ParamPathNames, T, V_final, StationaryDist_init, n_d, n_a, n_s, pi_s, d_grid,a_grid,s_grid, ReturnFn, SSvaluesFn, MarketPriceEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, MarketPriceParamNames,transpathoptions);
+[PricePathNew]=TransitionPath_Case1(PricePath0, PricePathNames, ParamPath, ParamPathNames, T, V_final, StationaryDist_init, n_d, n_a, n_s, pi_s, d_grid,a_grid,s_grid, ReturnFn, SSvaluesFn, MarketClearanceEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, MarketClearanceParamNames,transpathoptions);
 
 
 
