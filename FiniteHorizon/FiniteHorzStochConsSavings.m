@@ -36,7 +36,7 @@ Params.r=0.03; % interest rate on assets
 % Declare the age dependent parameters. This is a simple matter of creating
 % the parameter as a row vector of length J (the VFI Toolkit automatically
 % detects which parameters depend on age and which do not).
-Params.Wj=[1,2,3,4,5,5,5,5,4,4]; % conditional probability of death
+Params.Wj=[1,2,3,4,5,5,5,5,4,4]; % income that is deterministic function of age
 
 % Stochastic Wz: use Tauchen method to discretize the AR(1) process Wz
 Params.Wz_rho=0.955;
