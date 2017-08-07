@@ -107,14 +107,14 @@ SSvalueParamNames(1).Names{};
 SSvaluesFn_1 = @(aprime_val,a_val,s_val) a_val; %We just want the aggregate assets (which is this periods state)
 SSvaluesFn={SSvaluesFn_1};
 
-%Now define the functions for the Market Clearance conditions
-    %Should be written as LHS of market clearance eqn minus RHS, so that 
+%Now define the functions for the General Equilibrium conditions
+    %Should be written as LHS of general eqm eqn minus RHS, so that 
     %the closer the value given by the function is to zero, the closer 
-    %the market is to clearing.
+    %the general eqm condition is to holding.
 %Note: length(AggVars) is as for SSvaluesFn and length(p) is number_p_vars
-MarketClearanceParamNames(1).Names={'alpha','delta'};
-MarketClearanceEqn_1 = @(AggVars,p,alpha,delta) p-(alpha*(AggVars^(alpha-1))*(Expectation_l^(1-alpha))-delta); %The requirement that the interest rate corresponds to the agg capital level
-MarketClearanceEqns={MarketClearanceEqn_1};
+GeneralEqmEqnParamNames(1).Names={'alpha','delta'};
+GeneralEqmEqn_1 = @(AggVars,p,alpha,delta) p-(alpha*(AggVars^(alpha-1))*(Expectation_l^(1-alpha))-delta); %The requirement that the interest rate corresponds to the agg capital level
+GeneralEqmEqns={GeneralEqmEqn_1};
 
 disp('sizes')
 n_a
@@ -130,7 +130,7 @@ ReturnFnParamNames={'alpha','delta','mu','r'}; %It is important that these are i
 %%
 
 %Use the toolkit to find the equilibrium price index
-PriceParamNames={'r'};
+GEPriceParamNames={'r'};
 %Set initial value for interest rates (Aiyagari proves that with idiosyncratic
 %uncertainty, the eqm interest rate is limited above by it's steady state value
 %without idiosyncratic uncertainty, that is that r<r_ss).
@@ -140,7 +140,7 @@ Params.r=0.04;
 V0=ones(n_a,n_s,'gpuArray'); %(a,s)
 
 disp('Calculating price vector corresponding to the stationary eqm')
-[p_eqm,~,MarketClearance]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, SSvaluesFn, MarketClearanceEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, MarketClearanceParamNames, PriceParamNames,heteroagentoptions, simoptions, vfoptions);
+[p_eqm,~,MarketClearance]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, SSvaluesFn, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, GeneralEqmEqnParamNames, PriceParamNames,heteroagentoptions, simoptions, vfoptions);
 
 p_eqm
 
