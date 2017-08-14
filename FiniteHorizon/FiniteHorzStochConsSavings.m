@@ -36,17 +36,17 @@ Params.r=0.03; % interest rate on assets
 % Declare the age dependent parameters. This is a simple matter of creating
 % the parameter as a row vector of length J (the VFI Toolkit automatically
 % detects which parameters depend on age and which do not).
-Params.Wj=[1,2,3,4,5,5,5,5,4,4]; % income that is deterministic function of age
+Params.Wj=[1,2,3,5,7,8,8,5,4,4]; % deterministic income depends on age
 
-% Stochastic Wz: use Tauchen method to discretize the AR(1) process Wz
-Params.Wz_rho=0.955;
-Params.Wz_sigmasqepsilon=0.1;
+% Stochastic Wz: use Tauchen method to discretize the AR(1) process log(Wz):
+Params.Wz_rho=0.7;
+Params.Wz_sigmasqepsilon=0.05;
 Params.Wz_sigmasqu=Params.Wz_sigmasqepsilon./(1-Params.Wz_rho.^2);
 Params.q=3; % For tauchen method
 [z_grid, pi_z]=TauchenMethod(0,Params.Wz_sigmasqu, Params.Wz_rho, n_z, Params.q);
 
 %% Grids
-maxa=5*10^5;
+maxa=150;
 a_grid=linspace(0,maxa,n_a)'; % Could probably do better by adding more grid points near zero
 
 %% Now, create the return function 
