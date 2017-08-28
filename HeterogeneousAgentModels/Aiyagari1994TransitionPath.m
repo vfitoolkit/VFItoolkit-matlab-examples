@@ -146,7 +146,7 @@ V0=ones(n_a,n_s,'gpuArray'); %(a,s)
 Params.alpha=0.36;
 
 disp('Calculating price vector corresponding to the initial stationary eqm')
-[p_eqm_init,~,MarketClearance]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, SSvaluesFn, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, GeneralEqmEqnParamNames, GEPriceParamNames); %,heteroagentoptions, simoptions, vfoptions);
+[p_eqm_init,~,GeneralEqmConditions]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, SSvaluesFn, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, GeneralEqmEqnParamNames, GEPriceParamNames); %,heteroagentoptions, simoptions, vfoptions);
 
 p_eqm_init
 
@@ -157,9 +157,9 @@ StationaryDist_init=StationaryDist_Case1(Policy_init,n_d,n_a,n_s,pi_s);
 
 % Double check some things
 SSvalues_AggVars_init=SSvalues_AggVars_Case1(StationaryDist_init, Policy_init, SSvaluesFn, Params, SSvalueParamNames, n_d, n_a, n_s, d_grid, a_grid, s_grid,2); % The 2 is for Parallel (use GPU)
-MarketClearance_init=real(MarketClearance_Case1(SSvalues_AggVars_init,p_eqm_init, GeneralEqmEqns, Params, GeneralEqmEqnParamNames));
+GeneralEqmConditions_init=real(GeneralEqmConditions_Case1(SSvalues_AggVars_init,p_eqm_init, GeneralEqmEqns, Params, GeneralEqmEqnParamNames));
 
-[MarketClearance, MarketClearance_init]
+[GeneralEqmConditions, GeneralEqmConditions_init]
 
 %% Compute the final general equilbrium
 Params.alpha=0.4;
@@ -167,7 +167,7 @@ Params.alpha=0.4;
 % Note: if the change in parameters affected pi_s this would need to be recalculated here.
 
 disp('Calculating price vector corresponding to the final stationary eqm')
-[p_eqm_final,~,MarketClearance]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, SSvaluesFn, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, GeneralEqmEqnParamNames, GEPriceParamNames); %,heteroagentoptions, simoptions, vfoptions);
+[p_eqm_final,~,GeneralEqmConditions]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, SSvaluesFn, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, GeneralEqmEqnParamNames, GEPriceParamNames); %,heteroagentoptions, simoptions, vfoptions);
 
 p_eqm_final
 
@@ -176,10 +176,10 @@ Params.r=p_eqm_final;
 [V_final,Policy_final]=ValueFnIter_Case1(V0, n_d,n_a,n_s,d_grid,a_grid,s_grid, pi_s, ReturnFn,Params, DiscountFactorParamNames,ReturnFnParamNames);
 
 StationaryDist_final=StationaryDist_Case1(Policy_final,n_d,n_a,n_s,pi_s);
-SSvalues_AggVars_final=SSvalues_AggVars_Case1(StationaryDist_final, Policy_final, SSvaluesFn, Params, SSvalueParamNames, n_d, n_a, n_s, d_grid, a_grid, s_grid, pi_s,p_eqm_final,2); % The 2 is for Parallel (use GPU)
-MarketClearance_final=real(MarketClearance_Case1(SSvalues_AggVars_final,p_eqm_final, GeneralEqmEqns, Params, GeneralEqmEqnParamNames));
+SSvalues_AggVars_final=SSvalues_AggVars_Case1(StationaryDist_final, Policy_final, SSvaluesFn, Params, SSvalueParamNames, n_d, n_a, n_s, d_grid, a_grid, s_grid, 2); % The 2 is for Parallel (use GPU)
+GeneralEqmConditions_final=real(GeneralEqmConditions_Case1(SSvalues_AggVars_final,p_eqm_final, GeneralEqmEqns, Params, GeneralEqmEqnParamNames));
 
-[MarketClearance, MarketClearance_final]
+[GeneralEqmConditions, GeneralEqmConditions_final]
 
 % Alternatively, you could use the p_grid option
 n_p=101; p_grid=linspace(p_eqm_final-0.01,p_eqm_final+0.01,n_p); heteroagentoptions.pgrid=p_grid;
