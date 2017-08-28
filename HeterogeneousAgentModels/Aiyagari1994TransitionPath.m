@@ -156,7 +156,7 @@ Params.r=p_eqm_init;
 StationaryDist_init=StationaryDist_Case1(Policy_init,n_d,n_a,n_s,pi_s);
 
 % Double check some things
-SSvalues_AggVars_init=SSvalues_AggVars_Case1(StationaryDist_init, Policy_init, SSvaluesFn, Params, SSvalueParamNames, n_d, n_a, n_s, d_grid, a_grid, s_grid, pi_s,p_eqm_init,2); % The 2 is for Parallel (use GPU)
+SSvalues_AggVars_init=SSvalues_AggVars_Case1(StationaryDist_init, Policy_init, SSvaluesFn, Params, SSvalueParamNames, n_d, n_a, n_s, d_grid, a_grid, s_grid,2); % The 2 is for Parallel (use GPU)
 MarketClearance_init=real(MarketClearance_Case1(SSvalues_AggVars_init,p_eqm_init, GeneralEqmEqns, Params, GeneralEqmEqnParamNames));
 
 [MarketClearance, MarketClearance_init]
