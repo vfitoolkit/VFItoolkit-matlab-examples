@@ -103,7 +103,7 @@ n_a=n_k;
 %Create descriptions of SS values as functions of d_grid, a_grid, s_grid &
 %pi_s (used to calculate the integral across the SS dist fn of whatever
 %functions you define here)
-SSvalueParamNames(1).Names{};
+SSvalueParamNames(1).Names={};
 SSvaluesFn_1 = @(aprime_val,a_val,s_val) a_val; %We just want the aggregate assets (which is this periods state)
 SSvaluesFn={SSvaluesFn_1};
 
