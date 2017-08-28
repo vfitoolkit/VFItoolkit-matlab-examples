@@ -140,7 +140,7 @@ Params.r=0.04;
 V0=ones(n_a,n_s,'gpuArray'); %(a,s)
 
 disp('Calculating price vector corresponding to the stationary eqm')
-[p_eqm,~,MarketClearance]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, SSvaluesFn, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, GeneralEqmEqnParamNames, PriceParamNames,heteroagentoptions, simoptions, vfoptions);
+[p_eqm,~,MarketClearance]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, SSvaluesFn, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, GeneralEqmEqnParamNames, GEPriceParamNames,heteroagentoptions, simoptions, vfoptions);
 
 p_eqm
 
