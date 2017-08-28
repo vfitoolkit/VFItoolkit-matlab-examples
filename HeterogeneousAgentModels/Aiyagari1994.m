@@ -169,11 +169,13 @@ SSvalues_AggVars=SSvalues_AggVars_Case1(StationaryDist, Policy, SSvaluesFn,Param
 aggsavingsrate=Params.delta*SSvalues_AggVars^(1-Params.alpha);
 
 % Calculate Lorenz curves, Gini coefficients, and Pareto tail coefficients
-SSvalueParamNames={'w'};
-%  @(d_val,aprime_val,a_val,s_val,pi_s,p_val,param)
-SSvalue_Earnings = @(aprime_val,a_val,s_val,p_val,param) param*s_val;
-SSvalue_Income = @(aprime_val,a_val,s_val,p_val,param) param*s_val+(1+p_val)*a_val;
-SSvalue_Wealth = @(aprime_val,a_val,s_val,p_val,param) a_val;
+SSvalueParamNames(1).Names={'w'};
+SSvalue_Earnings = @(aprime_val,a_val,s_val,param) w*s_val;
+SSvalueParamNames(2).Names={'r','w'};
+SSvalue_Income = @(aprime_val,a_val,s_val,r,w) w*s_val+(1+r)*a_val;
+SSvalueParamNames(3).Names={};
+SSvalue_Wealth = @(aprime_val,a_val,s_val) a_val;
+
 SSvaluesFnIneq={SSvalue_Earnings, SSvalue_Income, SSvalue_Wealth};
 SSvalues_LorenzCurves=SSvalues_LorenzCurve_Case1(StationaryDist, Policy, SSvaluesFnIneq, Params,SSvalueParamNames, n_d, n_a, n_s, d_grid, a_grid, s_grid, Parallel);
 
