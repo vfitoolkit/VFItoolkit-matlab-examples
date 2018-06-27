@@ -146,7 +146,7 @@ V0=ones(n_a,n_s,'gpuArray'); %(a,s)
 Params.alpha=0.36;
 
 disp('Calculating price vector corresponding to the initial stationary eqm')
-[p_eqm_init,~,MarketClearance]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, SSvaluesFn, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, GeneralEqmEqnParamNames, GEPriceParamNames); %,heteroagentoptions, simoptions, vfoptions);
+[p_eqm_init,~,GeneralEqmCondition]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, SSvaluesFn, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, GeneralEqmEqnParamNames, GEPriceParamNames); %,heteroagentoptions, simoptions, vfoptions);
 
 p_eqm_init
 
@@ -156,10 +156,10 @@ Params.r=p_eqm_init;
 StationaryDist_init=StationaryDist_Case1(Policy_init,n_d,n_a,n_s,pi_s);
 
 % Double check some things
-SSvalues_AggVars_init=SSvalues_AggVars_Case1(StationaryDist_init, Policy_init, SSvaluesFn, Params, SSvalueParamNames, n_d, n_a, n_s, d_grid, a_grid, s_grid, pi_s,p_eqm_init,2); % The 2 is for Parallel (use GPU)
-MarketClearance_init=real(MarketClearance_Case1(SSvalues_AggVars_init,p_eqm_init, GeneralEqmEqns, Params, GeneralEqmEqnParamNames));
+SSvalues_AggVars_init=SSvalues_AggVars_Case1(StationaryDist_init, Policy_init, SSvaluesFn, Params, SSvalueParamNames, n_d, n_a, n_s, d_grid, a_grid, s_grid, 2); % The 2 is for Parallel (use GPU)
+GeneralEqmCondition_init=real(GeneralEqmConditions_Case1(SSvalues_AggVars_init,p_eqm_init, GeneralEqmEqns, Params, GeneralEqmEqnParamNames));
 
-[MarketClearance, MarketClearance_init]
+[GeneralEqmCondition, GeneralEqmCondition_init]
 
 %% Compute the final general equilbrium
 Params.alpha=0.4;
@@ -167,7 +167,7 @@ Params.alpha=0.4;
 % Note: if the change in parameters affected pi_s this would need to be recalculated here.
 
 disp('Calculating price vector corresponding to the final stationary eqm')
-[p_eqm_final,~,MarketClearance]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, SSvaluesFn, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, GeneralEqmEqnParamNames, GEPriceParamNames); %,heteroagentoptions, simoptions, vfoptions);
+[p_eqm_final,~,GeneralEqmCondition]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, SSvaluesFn, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, GeneralEqmEqnParamNames, GEPriceParamNames); %,heteroagentoptions, simoptions, vfoptions);
 
 p_eqm_final
 
@@ -176,16 +176,16 @@ Params.r=p_eqm_final;
 [V_final,Policy_final]=ValueFnIter_Case1(V0, n_d,n_a,n_s,d_grid,a_grid,s_grid, pi_s, ReturnFn,Params, DiscountFactorParamNames,ReturnFnParamNames);
 
 StationaryDist_final=StationaryDist_Case1(Policy_final,n_d,n_a,n_s,pi_s);
-SSvalues_AggVars_final=SSvalues_AggVars_Case1(StationaryDist_final, Policy_final, SSvaluesFn, Params, SSvalueParamNames, n_d, n_a, n_s, d_grid, a_grid, s_grid, pi_s,p_eqm_final,2); % The 2 is for Parallel (use GPU)
-MarketClearance_final=real(MarketClearance_Case1(SSvalues_AggVars_final,p_eqm_final, GeneralEqmEqns, Params, GeneralEqmEqnParamNames));
+SSvalues_AggVars_final=SSvalues_AggVars_Case1(StationaryDist_final, Policy_final, SSvaluesFn, Params, SSvalueParamNames, n_d, n_a, n_s, d_grid, a_grid, s_grid, 2); % The 2 is for Parallel (use GPU)
+GeneralEqmCondition_final=real(GeneralEqmConditions_Case1(SSvalues_AggVars_final,p_eqm_final, GeneralEqmEqns, Params, GeneralEqmEqnParamNames));
 
-[MarketClearance, MarketClearance_final]
+[GeneralEqmCondition, GeneralEqmCondition_final]
 
 % Alternatively, you could use the p_grid option
 n_p=101; p_grid=linspace(p_eqm_final-0.01,p_eqm_final+0.01,n_p); heteroagentoptions.pgrid=p_grid;
-[p_eqm2,p_eqm_index2,MarketClearanceVec2]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, SSvaluesFn, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, GeneralEqmEqnParamNames, GEPriceParamNames,heteroagentoptions); %, simoptions, vfoptions);
+[p_eqm2,p_eqm_index2,GeneralEqmConditionVec2]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, SSvaluesFn, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, GeneralEqmEqnParamNames, GEPriceParamNames,heteroagentoptions); %, simoptions, vfoptions);
 p_grid2=linspace(p_grid(p_eqm_index2-5),p_grid(p_eqm_index2+5),n_p); heteroagentoptions.pgrid=p_grid2;
-[p_eqm3,p_eqm_index3,MarketClearanceVec3]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, SSvaluesFn, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, GeneralEqmEqnParamNames, GEPriceParamNames,heteroagentoptions); %, simoptions, vfoptions);
+[p_eqm3,p_eqm_index3,GeneralEqmConditionVec3]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, SSvaluesFn, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, GeneralEqmEqnParamNames, GEPriceParamNames,heteroagentoptions); %, simoptions, vfoptions);
 
 [p_eqm_final, p_eqm2, p_eqm3]
 
@@ -207,6 +207,18 @@ ParamPathNames={'alpha'};
 % We need to give an initial guess for the price path on interest rates
 PricePath0=[linspace(p_eqm_init, p_eqm_final, floor(T/2))'; p_eqm_final*ones(T-floor(T/2),1)]; % PricePath0 is matrix of size T-by-'number of prices'
 PricePathNames={'r'};
+
+% Rewrite the General Eqm conditions as rules for updating the price
+transpathoptions.GEnewprice=1; % If you do not do this the codes can still solve, but take much longer as they must figure out an updating rule for themselves.
+GeneralEqmEqnParamNames(1).Names={'alpha','delta'};
+GeneralEqmEqn_1 = @(AggVars,p,alpha,delta) (alpha*(AggVars^(alpha-1))*(Expectation_l^(1-alpha))-delta); %The interest rate that corresponds to the marginal product of capital
+GeneralEqmEqns={GeneralEqmEqn_1};
+
+% [transpathoptions.GEnewprice=1 means that the GeneralEqmEqns should be
+% expressed as how to generate a new guess for the price based on the
+% current guess; transpathoptions.GEnewprice=0 means the GeneralEqmEqns
+% should be expressed as for the standard general eqm conditions, namely
+% equations that take the value of 0 in general eqm.]
 
 % Now just run the TransitionPath_Case1 command (all of the other inputs
 % are things we had already had to define to be able to solve for the
