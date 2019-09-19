@@ -200,15 +200,15 @@ toc
 
 %% Set up the General Equilibrium conditions (on assets/interest rate, assuming a representative firm with Cobb-Douglas production function)
 
-% Steady State Aggregates (important that ordering of Names and Functions is the same)
-SSvaluesParamNames=struct();
-SSvaluesParamNames(1).Names={};
-SSvaluesFn_1 = @(aprime_val,a_val,z_val) a_val; % Aggregate assets (which is this periods state)
-SSvaluesParamNames(2).Names={'ybarj'};
-SSvaluesFn_2 = @(aprime_val,a_val,z_val,ybarj) exp(z_val+ybarj); % Aggregate labour supply (in efficiency units)
-SSvaluesParamNames(3).Names={'sj','r','tau'};
-SSvaluesFn_3 = @(aprime_val,a_val,z_val,sj,r,tau) (1-sj)*aprime_val*(1+r*(1-tau)); % Total accidental bequests
-SSvaluesFn={SSvaluesFn_1,SSvaluesFn_2,SSvaluesFn_3};
+% Stationary Distribution Aggregates (important that ordering of Names and Functions is the same)
+FnsToEvaluateParamNames=struct();
+FnsToEvaluateParamNames(1).Names={};
+FnsToEvaluateFn_1 = @(aprime_val,a_val,z_val) a_val; % Aggregate assets (which is this periods state)
+FnsToEvaluateParamNames(2).Names={'ybarj'};
+FnsToEvaluateFn_2 = @(aprime_val,a_val,z_val,ybarj) exp(z_val+ybarj); % Aggregate labour supply (in efficiency units)
+FnsToEvaluateParamNames(3).Names={'sj','r','tau'};
+FnsToEvaluateFn_3 = @(aprime_val,a_val,z_val,sj,r,tau) (1-sj)*aprime_val*(1+r*(1-tau)); % Total accidental bequests
+FnsToEvaluate={FnsToEvaluateFn_1,FnsToEvaluateFn_2,FnsToEvaluateFn_3};
 % Note that the aggregate labour supply is actually entirely exogenous and so I could just precompute it, but am feeling lazy.
 
 % General Equilibrium Equations
@@ -224,9 +224,9 @@ GeneralEqmEqns={GeneralEqmEqn_1,GeneralEqmEqn_2,GeneralEqmEqn_3};
 
 %% Test
 disp('Test AggVars')
-SSvalues_AggVars=SSvalues_AggVars_FHorz_Case1(StationaryDist, Policy, SSvaluesFn, Params, SSvaluesParamNames, 0, n_a, n_z,N_j, 0, a_grid, z_grid, 2); % The 2 is for Parallel (use GPU)
+AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, 0, n_a, n_z,N_j, 0, a_grid, z_grid, 2); % The 2 is for Parallel (use GPU)
 disp('Test AggVars: Done')
-GeneralEqmConditionsVec=real(GeneralEqmConditions_Case1(SSvalues_AggVars,[Params.r,Params.b,Params.T], GeneralEqmEqns, Params,GeneralEqmEqnParamNames));
+GeneralEqmConditionsVec=real(GeneralEqmConditions_Case1(AggVars,[Params.r,Params.b,Params.T], GeneralEqmEqns, Params,GeneralEqmEqnParamNames));
 
 
 %% Solve for the General Equilibrium
@@ -238,7 +238,7 @@ GeneralEqmConditionsVec=real(GeneralEqmConditions_Case1(SSvalues_AggVars,[Params
 % Without p_grid, just searching. Use n_p=0. (Setting the actual algorithm
 % used to 'search' can be done with heteroagentoptions.fminalgo)
 heteroagentoptions.verbose=1;
-[p_eqm,p_eqm_index, GeneralEqmEqnsValues]=HeteroAgentStationaryEqm_Case1_FHorz(jequaloneDist,AgeWeightsParamNames,0, n_a, n_z, N_j, 0, pi_z, 0, a_grid, z_grid, ReturnFn, SSvaluesFn, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvaluesParamNames, GeneralEqmEqnParamNames, GEPriceParamNames, heteroagentoptions, simoptions, vfoptions);
+[p_eqm,p_eqm_index, GeneralEqmEqnsValues]=HeteroAgentStationaryEqm_Case1_FHorz(jequaloneDist,AgeWeightsParamNames,0, n_a, n_z, N_j, 0, pi_z, 0, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, GEPriceParamNames, heteroagentoptions, simoptions, vfoptions);
 Params.r=p_eqm(1);
 Params.b=p_eqm(2);
 Params.T=p_eqm(3);
@@ -308,10 +308,10 @@ FnsToEvaluateParamNames=struct();
 FnsToEvaluateParamNames(1).Names={};
 FnsToEvaluate_1 = @(aprime_val,a_val,z_val) a_val; % Aggregate assets (which is this periods state)
 FnsToEvaluate={FnsToEvaluate_1};
-SSvalues_LorenzCurves=SSvalues_LorenzCurve_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, 0, n_a, n_z,N_j, 0, a_grid, z_grid,2); % The 2 is for Parallel (use GPU)
-TopWealthShares=100*(1-SSvalues_LorenzCurves([80,95,99],1)); % Need the 20,5, and 1 top shares for Tables of Huggett (1996)
+StationaryDist_LorenzCurves=EvalFnOnAgentDist_LorenzCurve_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, 0, n_a, n_z,N_j, 0, a_grid, z_grid,2); % The 2 is for Parallel (use GPU)
+TopWealthShares=100*(1-StationaryDist_LorenzCurves([80,95,99],1)); % Need the 20,5, and 1 top shares for Tables of Huggett (1996)
 % Calculate the wealth gini
-WealthGini=Gini_from_LorenzCurve(SSvalues_LorenzCurves(:,1));
+WealthGini=Gini_from_LorenzCurve(StationaryDist_LorenzCurves(:,1));
 
 AgeConditionalStats=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvaluate,FnsToEvaluateParamNames,Params,0,n_a,n_z,N_j,0,a_grid,z_grid);
 

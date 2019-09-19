@@ -103,9 +103,9 @@ n_a=n_k;
 %Create descriptions of SS values as functions of d_grid, a_grid, s_grid &
 %pi_s (used to calculate the integral across the SS dist fn of whatever
 %functions you define here)
-SSvalueParamNames(1).Names={};
-SSvaluesFn_1 = @(aprime_val,a_val,s_val) a_val; %We just want the aggregate assets (which is this periods state)
-SSvaluesFn={SSvaluesFn_1};
+FnsToEvaluateParamNames(1).Names={};
+FnsToEvaluateFn_1 = @(aprime_val,a_val,s_val) a_val; %We just want the aggregate assets (which is this periods state)
+FnsToEvaluate={FnsToEvaluateFn_1};
 
 %Now define the functions for the General Equilibrium conditions
     %Should be written as LHS of general eqm eqn minus RHS, so that 
@@ -140,7 +140,7 @@ Params.r=0.04;
 V0=ones(n_a,n_s,'gpuArray'); %(a,s)
 
 disp('Calculating price vector corresponding to the stationary eqm')
-[p_eqm,~,GeneralEqmCondn]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, SSvaluesFn, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, GeneralEqmEqnParamNames, GEPriceParamNames,heteroagentoptions, simoptions, vfoptions);
+[p_eqm,~,GeneralEqmCondn]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, GEPriceParamNames,heteroagentoptions, simoptions, vfoptions);
 
 p_eqm
 
@@ -156,7 +156,7 @@ Params.r=p_eqm;
 
 StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_s,pi_s, simoptions);
 
-SSvalues_AggVars=SSvalues_AggVars_Case1(StationaryDist, Policy, SSvaluesFn,Params, SSvalueParamNames,n_d, n_a, n_s, d_grid, a_grid,s_grid,Parallel)
+AggVars=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate,Params, FnsToEvaluateParamNames,n_d, n_a, n_s, d_grid, a_grid,s_grid,Parallel)
 
 % save ./SavedOutput/Aiyagari1994SSObjects.mat p_eqm Policy StationaryDist
 
@@ -166,31 +166,31 @@ SSvalues_AggVars=SSvalues_AggVars_Case1(StationaryDist, Policy, SSvaluesFn,Param
 % In equilibrium K is constant, so aggregate savings is just depreciation, which
 % equals delta*K. The agg savings rate is thus delta*K/Y.
 % So agg savings rate is given by s=delta*K/(K^{\alpha})=delta*K^{1-\alpha}
-aggsavingsrate=Params.delta*SSvalues_AggVars^(1-Params.alpha);
+aggsavingsrate=Params.delta*AggVars^(1-Params.alpha);
 
 % Calculate Lorenz curves, Gini coefficients, and Pareto tail coefficients
-SSvalueParamNames(1).Names={'w'};
-SSvalue_Earnings = @(aprime_val,a_val,s_val,param) w*s_val;
-SSvalueParamNames(2).Names={'r','w'};
-SSvalue_Income = @(aprime_val,a_val,s_val,r,w) w*s_val+(1+r)*a_val;
-SSvalueParamNames(3).Names={};
-SSvalue_Wealth = @(aprime_val,a_val,s_val) a_val;
-SSvaluesFnIneq={SSvalue_Earnings, SSvalue_Income, SSvalue_Wealth};
-SSvalues_LorenzCurves=SSvalues_LorenzCurve_Case1(StationaryDist, Policy, SSvaluesFnIneq, Params,SSvalueParamNames, n_d, n_a, n_s, d_grid, a_grid, s_grid, Parallel);
+FnsToEvaluateParamNames(1).Names={'w'};
+FnsToEvaluate_Earnings = @(aprime_val,a_val,s_val,param) w*s_val;
+FnsToEvaluateParamNames(2).Names={'r','w'};
+FnsToEvaluate_Income = @(aprime_val,a_val,s_val,r,w) w*s_val+(1+r)*a_val;
+FnsToEvaluateParamNames(3).Names={};
+FnsToEvaluate_Wealth = @(aprime_val,a_val,s_val) a_val;
+FnsToEvaluateFnIneq={FnsToEvaluate_Earnings, FnsToEvaluate_Income, FnsToEvaluate_Wealth};
+StationaryDist_LorenzCurves=EvalFnOnAgentDist_LorenzCurve_Case1(StationaryDist, Policy, FnsToEvaluateFnIneq, Params,FnsToEvaluateParamNames, n_d, n_a, n_s, d_grid, a_grid, s_grid, Parallel);
 
 % 3.5 The Distributions of Earnings and Wealth
 %  Gini for Earnings
-EarningsGini=Gini_from_LorenzCurve(SSvalues_LorenzCurves(1,:));
-IncomeGini=Gini_from_LorenzCurve(SSvalues_LorenzCurves(2,:));
-WealthGini=Gini_from_LorenzCurve(SSvalues_LorenzCurves(3,:));
+EarningsGini=Gini_from_LorenzCurve(StationaryDist_LorenzCurves(1,:));
+IncomeGini=Gini_from_LorenzCurve(StationaryDist_LorenzCurves(2,:));
+WealthGini=Gini_from_LorenzCurve(StationaryDist_LorenzCurves(3,:));
 
 % Calculate inverted Pareto coeff, b, from the top income shares as b=1/[log(S1%/S0.1%)/log(10)] (formula taken from Excel download of WTID database)
 % No longer used: Calculate Pareto coeff from Gini as alpha=(1+1/G)/2; ( http://en.wikipedia.org/wiki/Pareto_distribution#Lorenz_curve_and_Gini_coefficient)
 % Recalculte Lorenz curves, now with 1000 points
-SSvalues_LorenzCurves=SSvalues_LorenzCurve_Case1(StationaryDist, Policy, SSvaluesFnIneq, Params,SSvalueParamNames, n_d, n_a, n_s, d_grid, a_grid, s_grid, Parallel,1000);
-EarningsParetoCoeff=1/((log(SSvalues_LorenzCurves(1,990))/log(SSvalues_LorenzCurves(1,999)))/log(10)); %(1+1/EarningsGini)/2;
-IncomeParetoCoeff=1/((log(SSvalues_LorenzCurves(2,990))/log(SSvalues_LorenzCurves(2,999)))/log(10)); %(1+1/IncomeGini)/2;
-WealthParetoCoeff=1/((log(SSvalues_LorenzCurves(3,990))/log(SSvalues_LorenzCurves(3,999)))/log(10)); %(1+1/WealthGini)/2;
+StationaryDist_LorenzCurves=EvalFnOnAgentDist_LorenzCurve_Case1(StationaryDist, Policy, FnsToEvaluateFnIneq, Params,FnsToEvaluateParamNames, n_d, n_a, n_s, d_grid, a_grid, s_grid, Parallel,1000);
+EarningsParetoCoeff=1/((log(StationaryDist_LorenzCurves(1,990))/log(StationaryDist_LorenzCurves(1,999)))/log(10)); %(1+1/EarningsGini)/2;
+IncomeParetoCoeff=1/((log(StationaryDist_LorenzCurves(2,990))/log(StationaryDist_LorenzCurves(2,999)))/log(10)); %(1+1/IncomeGini)/2;
+WealthParetoCoeff=1/((log(StationaryDist_LorenzCurves(3,990))/log(StationaryDist_LorenzCurves(3,999)))/log(10)); %(1+1/WealthGini)/2;
 
 
 %% Display some output about the solution

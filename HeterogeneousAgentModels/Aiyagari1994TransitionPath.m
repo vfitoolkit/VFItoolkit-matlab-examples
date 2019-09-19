@@ -106,9 +106,9 @@ n_a=n_k;
 %Create descriptions of SS values as functions of d_grid, a_grid, s_grid &
 %pi_s (used to calculate the integral across the SS dist fn of whatever
 %functions you define here)
-SSvalueParamNames(1).Names={};
-SSvaluesFn_1 = @(aprime_val,a_val,s_val) a_val; %We just want the aggregate assets (which is this periods state)
-SSvaluesFn={SSvaluesFn_1};
+FnsToEvaluateParamNames(1).Names={};
+FnsToEvaluateFn_1 = @(aprime_val,a_val,s_val) a_val; %We just want the aggregate assets (which is this periods state)
+FnsToEvaluate={FnsToEvaluateFn_1};
 
 %Now define the functions for the General Equilibrium conditions
     %Should be written as LHS of general eqm eqn minus RHS, so that 
@@ -146,7 +146,7 @@ V0=ones(n_a,n_s,'gpuArray'); %(a,s)
 Params.alpha=0.36;
 
 disp('Calculating price vector corresponding to the initial stationary eqm')
-[p_eqm_init,~,GeneralEqmCondition]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, SSvaluesFn, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, GeneralEqmEqnParamNames, GEPriceParamNames); %,heteroagentoptions, simoptions, vfoptions);
+[p_eqm_init,~,GeneralEqmCondition]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, GEPriceParamNames); %,heteroagentoptions, simoptions, vfoptions);
 
 p_eqm_init
 
@@ -156,8 +156,8 @@ Params.r=p_eqm_init;
 StationaryDist_init=StationaryDist_Case1(Policy_init,n_d,n_a,n_s,pi_s);
 
 % Double check some things
-SSvalues_AggVars_init=SSvalues_AggVars_Case1(StationaryDist_init, Policy_init, SSvaluesFn, Params, SSvalueParamNames, n_d, n_a, n_s, d_grid, a_grid, s_grid, 2); % The 2 is for Parallel (use GPU)
-GeneralEqmCondition_init=real(GeneralEqmConditions_Case1(SSvalues_AggVars_init,p_eqm_init, GeneralEqmEqns, Params, GeneralEqmEqnParamNames));
+AggVars_init=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_init, Policy_init, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_s, d_grid, a_grid, s_grid, 2); % The 2 is for Parallel (use GPU)
+GeneralEqmCondition_init=real(GeneralEqmConditions_Case1(AggVars_init,p_eqm_init, GeneralEqmEqns, Params, GeneralEqmEqnParamNames));
 
 [GeneralEqmCondition, GeneralEqmCondition_init]
 
@@ -167,7 +167,7 @@ Params.alpha=0.4;
 % Note: if the change in parameters affected pi_s this would need to be recalculated here.
 
 disp('Calculating price vector corresponding to the final stationary eqm')
-[p_eqm_final,~,GeneralEqmCondition]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, SSvaluesFn, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, GeneralEqmEqnParamNames, GEPriceParamNames); %,heteroagentoptions, simoptions, vfoptions);
+[p_eqm_final,~,GeneralEqmCondition]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, GEPriceParamNames); %,heteroagentoptions, simoptions, vfoptions);
 
 p_eqm_final
 
@@ -176,16 +176,16 @@ Params.r=p_eqm_final;
 [V_final,Policy_final]=ValueFnIter_Case1(V0, n_d,n_a,n_s,d_grid,a_grid,s_grid, pi_s, ReturnFn,Params, DiscountFactorParamNames,ReturnFnParamNames);
 
 StationaryDist_final=StationaryDist_Case1(Policy_final,n_d,n_a,n_s,pi_s);
-SSvalues_AggVars_final=SSvalues_AggVars_Case1(StationaryDist_final, Policy_final, SSvaluesFn, Params, SSvalueParamNames, n_d, n_a, n_s, d_grid, a_grid, s_grid, 2); % The 2 is for Parallel (use GPU)
-GeneralEqmCondition_final=real(GeneralEqmConditions_Case1(SSvalues_AggVars_final,p_eqm_final, GeneralEqmEqns, Params, GeneralEqmEqnParamNames));
+AggVars_final=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_final, Policy_final, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_s, d_grid, a_grid, s_grid, 2); % The 2 is for Parallel (use GPU)
+GeneralEqmCondition_final=real(GeneralEqmConditions_Case1(AggVars_final,p_eqm_final, GeneralEqmEqns, Params, GeneralEqmEqnParamNames));
 
 [GeneralEqmCondition, GeneralEqmCondition_final]
 
 % Alternatively, you could use the p_grid option
 n_p=101; p_grid=linspace(p_eqm_final-0.01,p_eqm_final+0.01,n_p); heteroagentoptions.pgrid=p_grid;
-[p_eqm2,p_eqm_index2,GeneralEqmConditionVec2]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, SSvaluesFn, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, GeneralEqmEqnParamNames, GEPriceParamNames,heteroagentoptions); %, simoptions, vfoptions);
+[p_eqm2,p_eqm_index2,GeneralEqmConditionVec2]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, GEPriceParamNames,heteroagentoptions); %, simoptions, vfoptions);
 p_grid2=linspace(p_grid(p_eqm_index2-5),p_grid(p_eqm_index2+5),n_p); heteroagentoptions.pgrid=p_grid2;
-[p_eqm3,p_eqm_index3,GeneralEqmConditionVec3]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, SSvaluesFn, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, GeneralEqmEqnParamNames, GEPriceParamNames,heteroagentoptions); %, simoptions, vfoptions);
+[p_eqm3,p_eqm_index3,GeneralEqmConditionVec3]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, GEPriceParamNames,heteroagentoptions); %, simoptions, vfoptions);
 
 [p_eqm_final, p_eqm2, p_eqm3]
 
@@ -225,7 +225,7 @@ GeneralEqmEqns={GeneralEqmEqn_1};
 % initial and final equilibria)
 transpathoptions.weightscheme=1
 transpathoptions.verbose=1
-[PricePathNew]=TransitionPath_Case1(PricePath0, PricePathNames, ParamPath, ParamPathNames, T, V_final, StationaryDist_init, n_d, n_a, n_s, pi_s, d_grid,a_grid,s_grid, ReturnFn, SSvaluesFn, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, GeneralEqmEqnParamNames,transpathoptions);
+[PricePathNew]=TransitionPath_Case1(PricePath0, PricePathNames, ParamPath, ParamPathNames, T, V_final, StationaryDist_init, n_d, n_a, n_s, pi_s, d_grid,a_grid,s_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames,transpathoptions);
 
 
 
