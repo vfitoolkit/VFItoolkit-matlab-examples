@@ -5,17 +5,7 @@
 % vfitoolkit commands to easily calculate things like the Gini coefficient
 % for income, and how to plot the distribution of asset holdings.
 
-Parallel=2 %GPU
-
-% A few lines needed for running on the Server (you are unlikely to want these).
-addpath(genpath('./MatlabToolkits/'))
-try % Server has 16 cores, but is shared with other users, so use max of 8.
-    parpool(8)
-catch % Desktop has less than 8, so will give error, on desktop it is fine to use all available cores.
-    parpool
-end
-% PoolDetails=gcp;
-% NCores=PoolDetails.NumWorkers;
+Parallel=2 % 2 for GPU, 1 for parallel CPU, 0 for single CPU.
 
 %% Set some basic variables
 
