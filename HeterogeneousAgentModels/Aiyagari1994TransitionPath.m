@@ -29,21 +29,11 @@ CreateIndividualParams(Params)
 
 %% Some Toolkit options
 tauchenoptions.parallel=Parallel;
-
-mcmomentsoptions.T=10^4;
-mcmomentsoptions.Tolerance=10^(-9);
 mcmomentsoptions.parallel=tauchenoptions.parallel;
+vfoptions.parallel=Parallel;
+simoptions.parallel=Parallel;
 
-% vfoptions.lowmemory=0;
-% vfoptions.parallel=Parallel;
-% 
-% simoptions.burnin=10^4;
-% simoptions.simperiods=10^5; % For an accurate solution you will either need simperiod=10^5 and iterate=1, or simperiod=10^6 (iterate=0).
-% simoptions.iterate=1;
-% simoptions.parallel=Parallel; %Use GPU
-
-% Since this example is intended to show working of transtion paths, make
-% it verbose (print output)
+% Since this example is intended to show working of transtion paths, make it verbose (print output)
 transpathoptions.verbose=1;
 
 %% Set up the exogenous shock process
