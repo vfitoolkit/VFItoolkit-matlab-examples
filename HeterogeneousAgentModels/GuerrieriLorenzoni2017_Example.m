@@ -52,9 +52,9 @@ Params.tauchenq=2.1; % I have reverse engineered this value from the grid of GL2
 % This choice of tauchenq is crucial to the results/replication of GL2017. It means
 % that the min and max productivity shocks in the model, while they have the correct variance, have a range which
 % is roughly just +-standard deviation. Because this range of shocks is so (empirically unrealistically) small
-% lots of agents in the model end up near the borrowing constraint (which is not true using, e.g., tauchenq=3).
-% Without lots of agents near the borrowing constraint the credit crisis (change in phi) has very little effect on the model.
-% (See 'comment' on blog at vfitoolkit.com)
+% the equilibrium interest rate is higher than it would otherwise be; if you use tauchenq=3 the zero-lower bound 
+% on interest rates in the 'new-keynesian sticky-wage' transition lasts for decades.
+% (See 'Comment' on blog at vfitoolkit.com: http://www.vfitoolkit.com/updates-blog/2020/transition-paths-example-based-on-guerrieri-lorenzoni-2017/ )
 
 Params.v=0.1670; % Unemployment benefit
 Params.B=2.6712; % Bond supply
@@ -64,7 +64,7 @@ Params.phi_initial=1.6005;
 Params.phi_final=0.8767;
 Params.phi=Params.phi_initial; % Borrowing limit
 
-Params.r=0.006; % General equilibrium interest rate (I use this instead of q). This is just an initial guess. [Model is quarterly, so this corresponds to 4*r at an annual rate.]
+Params.r=0.006; % General equilibrium interest rate (I use this instead of q). This is just an initial guess. [Model is quarterly, so this corresponds to roughly 2.4% (=4*r) at an annual rate. (Ignoring compounding.)]
 % Params.tau % Lump-sum taxes, determined in general equilibrium (I implement it directly inside the ReturnFn)
 
 Params.omega=0; % This is not actually needed for anything until we get to the 'Sticky Wage' model (Section 4 of GL2017, pg 1450)
@@ -284,7 +284,7 @@ subplot(2,1,2); plot(a_grid/AnnualOutput_initial,sum(StationaryDist_initial,2), 
 %%
 % Free up space on gpu
 clear ConsumptionDecision
-clear Policy_initial
+% clear Policy_initial
 clear PolicyValues PolicyValuesPermute
 clear StationaryDist_final
 
@@ -545,9 +545,10 @@ GeneralEqmEqns={GeneralEqmEqn_1,GeneralEqmEqn_2};
 % Now just run the TransitionPath_Case1 command (all of the other inputs
 % are things we had already had to define to be able to solve for the
 % initial and final equilibria)
-transpathoptions.weightscheme=1
-transpathoptions.verbose=1
-transpathoptions.tolerance=10^(-4) % will run until r and omega settle to four digits
+transpathoptions.weightscheme=1; % This is anyway the default
+transpathoptions.verbose=1;
+transpathoptions.tolerance=10^(-4); % will run until r and omega settle to four digits
+transpathoptions % show what the options have been set to
 PricePath_NK=TransitionPath_Case1(PricePath0, PricePathNames_NK, ParamPath, ParamPathNames, T, V_final, StationaryDist_initial, n_d, n_a, n_z, pi_z, d_grid,a_grid,z_grid, ReturnFn,  FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames,transpathoptions);
 
 %% Figure 8 (I do an additional Figure 17 that shows the 'wedges' and employment)
@@ -579,6 +580,8 @@ title('output')
 % ylabel('percent deviation from inital output in stationary eqm')
 % saveas(gcf,['./SavedOutput/Graphs/GuerrieriLorenzoni_Figure8.pdf'])
 
+saveas(gcf,['./SavedOutput/Graphs/GuerrieriLorenzoni_Figure8_Tauchenq3.pdf'])
+
 % Not actually part of GL2017, but let's take a look at the path for omega (the wedge on labour supply that 'enforces' the zero lower bound on interest rates)
 figure(17)
 % wedges
@@ -590,3 +593,8 @@ title('employment')
 legend('flex price', 'NK fix price (ZLB)')
 % ylabel('percent deviation from inital output in stationary eqm')
 % saveas(gcf,['./SavedOutput/Graphs/GuerrieriLorenzoni_ExtraFigure1.pdf'])
+
+
+
+
+
