@@ -8,7 +8,7 @@
 % For explanation of model, the calibration choices, and what the policy
 % experiments are aiming to understand, see paper.
 
-Parallel=1; % 1 for (parallel) CPUs, 2 for GPU
+Parallel=1; % 1 for (parallel) CPUs, 2 for GPU, 0 for single CPU
 
 %% Set some basic variables
 
@@ -112,7 +112,7 @@ xlabel('Number of Employees (log scale)')
 ylabel('Cummulative Distribution of Establishments')
 legend('Model','Data','Location','NorthWest')
 axis([0 14000 0 1.1])
-saveas(gcf,['./SavedOutput/Graphs/RestucciaRogerson2008_Figure1.pdf'])
+% saveas(gcf,['./RestucciaRogerson2008_Figure1.pdf'])
 % Remark: the 'sagging curves' of model between data points is a result of
 % the graph being done with log scale, while the interpolation is done
 % based on (linear scale) number of employees directly.
@@ -296,7 +296,7 @@ StationaryDist.mass=StationaryDist.mass*(Params.Ne/InitialNe); % Take advantage 
 % Not exactly replicating anything as this is just the parameter values...
 
 %Table 1
-FID = fopen('./SavedOutput/LatexInputs/RestucciaRogerson2008_Table1.tex', 'w');
+FID = fopen('./RestucciaRogerson2008_Table1.tex', 'w');
 fprintf(FID, 'Benchmark calibration to US data \\\\ \n');
 fprintf(FID, '\\begin{tabular*}{1.00\\textwidth}{@{\\extracolsep{\\fill}}lll} \n \\hline \n');
 fprintf(FID, 'Parameters & Value & Target \\\\ \\hline \n');
@@ -319,7 +319,7 @@ fclose(FID);
 
 % One could code this directly easily enough since there are closed form
 % solutions for kbar and nbar in terms of (s,tau). But will use the VFI
-% Toolkit commands simply to show how to apply them.
+% Toolkit commands to show how to apply them.
 
 FnsToEvaluateParamNames(1).Names={'alpha','gamma','r','w','taurate','subsidyrate'};
 FnsToEvaluateFn_kbar = @(aprime_val,a_val,z1_val,z2_val,mass,alpha,gamma,r,w,taurate,subsidyrate) (alpha/r)^((1-gamma)/(1-gamma-alpha)) *(gamma/w)^(gamma/(1-gamma-alpha)) *(z1_val*(1-((z2_val>=0)*taurate+(z2_val<0)*subsidyrate)*z2_val))^(1/(1-alpha-gamma));
@@ -370,7 +370,7 @@ AverageEmployment(2)=sum(sum(nbarValues(Partion2Indicator).*StationaryDist.pdf(P
 AverageEmployment(3)=sum(sum(nbarValues(Partion3Indicator).*StationaryDist.pdf(Partion3Indicator)))/sum(sum(StationaryDist.pdf(Partion3Indicator)));
 
 %Table 2
-FID = fopen('./SavedOutput/LatexInputs/RestucciaRogerson2008_Table2.tex', 'w');
+FID = fopen('./RestucciaRogerson2008_Table2.tex', 'w');
 fprintf(FID, 'Distribution statistics of benchmark economy \\\\ \n');
 fprintf(FID, '\\begin{tabular*}{1.00\\textwidth}{@{\\extracolsep{\\fill}}llcr} \n \\hline \\hline \n');
 fprintf(FID, ' & \\multicolumn{3}{l}{Establishment size (number of employees)} \\\\ \\cline{2-4} \n');
@@ -387,9 +387,10 @@ fprintf(FID, '\\hline \n \\end{tabular*} \n');
 fclose(FID);
 
 %% Calculate a bunch of things related to those reported in Table 3 just to show how.
-
+FnsToEvaluateParamNames(4).Names={'alpha','gamma','r','w','taurate','subsidyrate'};
 FnsToEvaluateFn_subsidy = @(aprime_val,a_val,z1_val,z2_val,mass, alpha,gamma,r,w,taurate,subsidyrate) (z2_val<0)*subsidyrate* ((1-((z2_val>=0)*taurate+(z2_val<0)*subsidyrate)*z2_val))^((alpha+gamma)/(1-gamma-alpha))*z1_val^(1/(1-gamma-alpha)) *(alpha/r)^(alpha/(1-gamma-alpha)) *(gamma/w)^(gamma/(1-gamma-alpha)); % (z2_val<0)*subsidyrate)* output
-% Following are just 'indicator for subsidised' times output, needed to calculate Ys
+% Following is just 'indicator for subsidised' times output, needed to calculate Ys
+FnsToEvaluateParamNames(5).Names={'alpha','gamma','r','w','taurate','subsidyrate'};
 FnsToEvaluateFn_outputofsubsidised = @(aprime_val,a_val,z1_val,z2_val,mass, alpha,gamma,r,w,taurate,subsidyrate) (z2_val<0)*((1-((z2_val>=0)*taurate+(z2_val<0)*subsidyrate)*z2_val))^((alpha+gamma)/(1-gamma-alpha))*z1_val^(1/(1-gamma-alpha)) *(alpha/r)^(alpha/(1-gamma-alpha)) *(gamma/w)^(gamma/(1-gamma-alpha));
 
 FnsToEvaluate={FnsToEvaluateFn_kbar, FnsToEvaluateFn_nbar, FnsToEvaluateFn_output, FnsToEvaluateFn_subsidy, FnsToEvaluateFn_outputofsubsidised};

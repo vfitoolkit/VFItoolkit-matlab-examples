@@ -1,5 +1,6 @@
 % Example based on Hopenhayn & Rogerson (1993) - Job Turnover and Policy Evaluation: A General Equilibrium Analysis
 
+% Solve on a single cpu, obviously this is not the fastest.
 vfoptions.parallel=0
 simoptions.parallel=0
 
@@ -341,7 +342,7 @@ NumberFirmsStillAlive=[size(SimPanel_Entrants,3),sum(~isnan(shiftdim(SimPanel_En
 PeriodHazardRate=1-NumberFirmsStillAlive(2:end)./NumberFirmsStillAlive(1:end-1);
 
 %Table 1
-FID = fopen('./SavedOutput/LatexInputs/HopenhaynRogerson1993_Table2.tex', 'w');
+FID = fopen('./HopenhaynRogerson1993_Table2.tex', 'w');
 fprintf(FID, 'A: Summary Statistics for Benchmark Model \\\\ \n');
 fprintf(FID, '\\begin{tabular*}{1.00\\textwidth}{@{\\extracolsep{\\fill}}lr} \n \\hline \\hline \n');
 fprintf(FID, 'Average firm size & %8.2f \\\\ \n', AvgFirmSize);
