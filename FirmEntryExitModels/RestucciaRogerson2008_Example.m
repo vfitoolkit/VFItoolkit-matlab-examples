@@ -143,10 +143,10 @@ DiscountFactorParamNames={'rho','oneminuslambda'};
 ReturnFn=@(aprime_val, a_val, z1_val,z2_val,w,r,alpha,gamma,taurate,subsidyrate,cf) RestucciaRogerson2008_ReturnFn(aprime_val, a_val, z1_val,z2_val,w,r,alpha,gamma,taurate,subsidyrate,cf);
 ReturnFnParamNames={'w','r','alpha','gamma','taurate','subsidyrate','cf'}; %It is important that these are in same order as they appear in 'RestucciaRogerson2008_ReturnFn'
 
+vfoptions.parallel=Parallel;
 % Check that everything is working so far by solving the value function
 if Parallel==1
     V0=zeros([n_a,n_z]);
-    vfoptions.parallel=Parallel;
 else
     V0=zeros([n_a,n_z],'gpuArray');
 end
