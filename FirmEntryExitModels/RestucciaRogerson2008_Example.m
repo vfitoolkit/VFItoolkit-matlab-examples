@@ -145,7 +145,7 @@ ReturnFnParamNames={'w','r','alpha','gamma','taurate','subsidyrate','cf'}; %It i
 
 vfoptions.parallel=Parallel;
 % Check that everything is working so far by solving the value function
-if Parallel==1
+if Parallel~=2
     V0=zeros([n_a,n_z]);
 else
     V0=zeros([n_a,n_z],'gpuArray');
