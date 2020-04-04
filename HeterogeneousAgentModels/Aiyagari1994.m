@@ -127,8 +127,12 @@ GEPriceParamNames={'r'};
 Params.r=0.04;
 
 %%
-V0=ones(n_a,n_s,'gpuArray'); %(a,s)
-
+% Initial guess for value function.
+if Parallel==2
+    V0=ones(n_a,n_s,'gpuArray'); %(a,s)
+else
+    V0=ones(n_a,n_s); %(a,s)
+end
 disp('Calculating price vector corresponding to the stationary eqm')
 [p_eqm,~,GeneralEqmCondn]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, GEPriceParamNames,heteroagentoptions, simoptions, vfoptions);
 
