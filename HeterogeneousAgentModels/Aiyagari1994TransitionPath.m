@@ -5,7 +5,7 @@
 % transition path in reposonse to a 'surprise' one off change in the
 % parameter beta (the time discount parameter).
 
-Parallel=1 % 2 for GPU, 1 for parallel CPU, 0 for single CPU.
+Parallel=2 % 2 for GPU, 1 for parallel CPU, 0 for single CPU.
 
 %% Set some basic variables
 
