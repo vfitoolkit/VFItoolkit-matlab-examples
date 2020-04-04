@@ -5,7 +5,7 @@
 % vfitoolkit commands to easily calculate things like the Gini coefficient
 % for income, and how to plot the distribution of asset holdings.
 
-Parallel=2 % 2 for GPU, 1 for parallel CPU, 0 for single CPU.
+Parallel=1 % 2 for GPU, 1 for parallel CPU, 0 for single CPU.
 
 %% Set some basic variables
 
