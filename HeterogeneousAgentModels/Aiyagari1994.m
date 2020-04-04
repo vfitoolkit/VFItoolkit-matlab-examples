@@ -150,7 +150,7 @@ Params.r=p_eqm;
 
 StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_s,pi_s, simoptions);
 
-AggVars=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate,Params, FnsToEvaluateParamNames,n_d, n_a, n_s, d_grid, a_grid,s_grid,Parallel)
+AggVars=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate,Params, FnsToEvaluateParamNames,n_d, n_a, n_s, d_grid, a_grid,s_grid,Parallel);
 
 % save ./SavedOutput/Aiyagari1994SSObjects.mat p_eqm Policy StationaryDist
 
@@ -164,7 +164,7 @@ aggsavingsrate=Params.delta*AggVars^(1-Params.alpha);
 
 % Calculate Lorenz curves, Gini coefficients, and Pareto tail coefficients
 FnsToEvaluateParamNames(1).Names={'w'};
-FnsToEvaluate_Earnings = @(aprime_val,a_val,s_val,param) w*s_val;
+FnsToEvaluate_Earnings = @(aprime_val,a_val,s_val,w) w*s_val;
 FnsToEvaluateParamNames(2).Names={'r','w'};
 FnsToEvaluate_Income = @(aprime_val,a_val,s_val,r,w) w*s_val+(1+r)*a_val;
 FnsToEvaluateParamNames(3).Names={};
