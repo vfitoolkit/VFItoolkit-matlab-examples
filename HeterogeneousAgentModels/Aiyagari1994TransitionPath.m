@@ -1,11 +1,13 @@
 % Example of computing a general eqm transition path for the model of Aiyagari (1994).
-
+%
 % These codes set up and solve the Aiyagari (1994) model for a given
 % parametrization. They then show how to solve for the general equilibrium
 % transition path in reposonse to a 'surprise' one off change in the
 % parameter beta (the time discount parameter).
-
-Parallel=2 % 2 for GPU, 1 for parallel CPU, 0 for single CPU.
+%
+% VFI Toolkit automatically detects hardware (GPU? Number of CPUs?) and
+% sets defaults accordingly. It will run without a GPU, but slowly. It is
+% indended for use with GPU.
 
 %% Set some basic variables
 
@@ -27,32 +29,24 @@ Params.q=3; %Footnote 33 of Aiyagari(1993WP, pg 25) implicitly says that he uses
 % parameters from the structure by running the following command
 CreateIndividualParams(Params)
 
-%% Some Toolkit options
-tauchenoptions.parallel=Parallel;
-mcmomentsoptions.parallel=tauchenoptions.parallel;
-vfoptions.parallel=Parallel;
-simoptions.parallel=Parallel;
-transpathoptions.parallel=Parallel;
-
-% Since this example is intended to show working of transtion paths, make it verbose (print output)
+%% Since this example is intended to show working of transtion paths, make it verbose (print output)
 transpathoptions.verbose=1;
 
 %% Set up the exogenous shock process
 %Create markov process for the exogenous labour productivity, l.
-% q=3; %Footnote 33 of Aiyagari(1993WP, pg 25) implicitly says that he uses q=3
-[s_grid, pi_s]=TauchenMethod(0,(Params.sigma^2)*(1-Params.rho^2),Params.rho,n_s,Params.q,tauchenoptions); %[states, transmatrix]=TauchenMethod_Param(mew,sigmasq,rho,znum,q,Parallel,Verbose), transmatix is (z,zprime)
+% Aiyagari (1994) uses 11 states (n_s=11), and footnote 33 of Aiyagari(1993WP, pg 25) implicitly says that he uses q=3.
+[s_grid, pi_s]=TauchenMethod(0,(Params.sigma^2)*(1-Params.rho^2),Params.rho,n_s,Params.q);
 
-%[s_grid, pi_s]=TauchenMethod_Param(0,(sigma^2)*(1-rho^2),rho,7,3); %This is the process for ln(l). Aiyagari uses 7 states, 
-[s_mean,s_variance,s_corr,~]=MarkovChainMoments(s_grid,pi_s,mcmomentsoptions);
+[s_mean,s_variance,s_corr,~]=MarkovChainMoments(s_grid,pi_s);
 s_grid=exp(s_grid);
 %Get some info on the markov process
-[Expectation_l,~,~,~]=MarkovChainMoments(s_grid,pi_s,mcmomentsoptions); %Since l is exogenous, this will be it's eqm value 
+[Expectation_l,~,~,~]=MarkovChainMoments(s_grid,pi_s); %Since l is exogenous, this will be it's eqm value 
 %Note: Aiyagari (1994) actually then normalizes l by dividing it by
 %Expectation_l (so that the resulting process has expectaion equal to 1
 %(see Aiyagari (1993WP), footnote 33 pg 25-26).
 %The following three lines do just this.
 s_grid=s_grid./Expectation_l;
-[Expectation_l,~,~,~]=MarkovChainMoments(s_grid,pi_s,mcmomentsoptions);
+[Expectation_l,~,~,~]=MarkovChainMoments(s_grid,pi_s);
 
 %% Grids
 
@@ -118,30 +112,22 @@ GEPriceParamNames={'r'};
 %without idiosyncratic uncertainty, that is that r<r_ss).
 Params.r=0.04;
 
-
-%%
-if Parallel==2
-    V0=ones(n_a,n_s,'gpuArray'); %(a,s)
-else
-    V0=ones(n_a,n_s); %(a,s)    
-end
-
 %% Compute the initial general equilibrium
 Params.alpha=0.36;
 
 disp('Calculating price vector corresponding to the initial stationary eqm')
-[p_eqm_init,~,GeneralEqmCondition]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, GEPriceParamNames,[], simoptions, vfoptions);
+[p_eqm_init,~,GeneralEqmCondition]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, GEPriceParamNames);
 
 p_eqm_init
 
 % For the transition path we will need the initial agents distribution
-Params.r=p_eqm_init;
-[~,Policy_init]=ValueFnIter_Case1(V0, n_d,n_a,n_s,d_grid,a_grid,s_grid, pi_s, ReturnFn,Params, DiscountFactorParamNames,ReturnFnParamNames, vfoptions);
-StationaryDist_init=StationaryDist_Case1(Policy_init,n_d,n_a,n_s,pi_s, simoptions);
+Params.r=p_eqm_init.r;
+[~,Policy_init]=ValueFnIter_Case1(n_d,n_a,n_s,d_grid,a_grid,s_grid, pi_s, ReturnFn,Params, DiscountFactorParamNames,ReturnFnParamNames);
+StationaryDist_init=StationaryDist_Case1(Policy_init,n_d,n_a,n_s,pi_s);
 
 % Double check some things
-AggVars_init=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_init, Policy_init, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_s, d_grid, a_grid, s_grid, simoptions.parallel);
-GeneralEqmCondition_init=real(GeneralEqmConditions_Case1(AggVars_init,p_eqm_init, GeneralEqmEqns, Params, GeneralEqmEqnParamNames, simoptions.parallel));
+AggVars_init=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_init, Policy_init, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_s, d_grid, a_grid, s_grid);
+GeneralEqmCondition_init=real(GeneralEqmConditions_Case1(AggVars_init,[p_eqm_init.r], GeneralEqmEqns, Params, GeneralEqmEqnParamNames));
 
 [GeneralEqmCondition, GeneralEqmCondition_init]
 
@@ -151,27 +137,27 @@ Params.alpha=0.4;
 % Note: if the change in parameters affected pi_s this would need to be recalculated here.
 
 disp('Calculating price vector corresponding to the final stationary eqm')
-[p_eqm_final,~,GeneralEqmCondition]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, GEPriceParamNames, [], simoptions, vfoptions);
+[p_eqm_final,~,GeneralEqmCondition]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, GEPriceParamNames);
 
 p_eqm_final
 
 % For the transition path we will need the final value function
-Params.r=p_eqm_final;
-[V_final,Policy_final]=ValueFnIter_Case1(V0, n_d,n_a,n_s,d_grid,a_grid,s_grid, pi_s, ReturnFn,Params, DiscountFactorParamNames,ReturnFnParamNames,vfoptions);
+Params.r=p_eqm_final.r;
+[V_final,Policy_final]=ValueFnIter_Case1(n_d,n_a,n_s,d_grid,a_grid,s_grid, pi_s, ReturnFn,Params, DiscountFactorParamNames,ReturnFnParamNames);
 
-StationaryDist_final=StationaryDist_Case1(Policy_final,n_d,n_a,n_s,pi_s,simoptions);
-AggVars_final=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_final, Policy_final, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_s, d_grid, a_grid, s_grid, simoptions.parallel);
-GeneralEqmCondition_final=real(GeneralEqmConditions_Case1(AggVars_final,p_eqm_final, GeneralEqmEqns, Params, GeneralEqmEqnParamNames, simoptions.parallel));
+StationaryDist_final=StationaryDist_Case1(Policy_final,n_d,n_a,n_s,pi_s);
+AggVars_final=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_final, Policy_final, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_s, d_grid, a_grid, s_grid);
+GeneralEqmCondition_final=real(GeneralEqmConditions_Case1(AggVars_final,p_eqm_final.r, GeneralEqmEqns, Params, GeneralEqmEqnParamNames));
 
 [GeneralEqmCondition, GeneralEqmCondition_final]
 
-% Alternatively, you could use the p_grid option
-n_p=101; p_grid=linspace(p_eqm_final-0.01,p_eqm_final+0.01,n_p); heteroagentoptions.pgrid=p_grid;
-[p_eqm2,p_eqm_index2,GeneralEqmConditionVec2]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, GEPriceParamNames,heteroagentoptions, simoptions, vfoptions);
-p_grid2=linspace(p_grid(p_eqm_index2-5),p_grid(p_eqm_index2+5),n_p); heteroagentoptions.pgrid=p_grid2;
-[p_eqm3,p_eqm_index3,GeneralEqmConditionVec3]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, GEPriceParamNames,heteroagentoptions, simoptions, vfoptions);
-
-[p_eqm_final, p_eqm2, p_eqm3]
+% % Alternatively, you could use the p_grid option
+% n_p=101; p_grid=linspace(p_eqm_final.r-0.01,p_eqm_final.r+0.01,n_p); heteroagentoptions.pgrid=p_grid;
+% [p_eqm2,p_eqm_index2,GeneralEqmConditionVec2]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, GEPriceParamNames,heteroagentoptions);
+% p_grid2=linspace(p_grid(p_eqm_index2-5),p_grid(p_eqm_index2+5),n_p); heteroagentoptions.pgrid=p_grid2;
+% [p_eqm3,p_eqm_index3,GeneralEqmConditionVec3]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, GEPriceParamNames,heteroagentoptions);
+% 
+% [p_eqm_final.r, p_eqm2.r, p_eqm3.r]
 
 % surf(k_grid*ones(1,n_s),ones(n_a,1)*s_grid',V_final)
 
@@ -184,13 +170,13 @@ p_grid2=linspace(p_grid(p_eqm_index2-5),p_grid(p_eqm_index2+5),n_p); heteroagent
 T=100
 
 % We want to look at a one off unanticipated change of beta. ParamPath & PathParamNames are thus given by
-ParamPath=0.4*ones(T,1); % ParamPath is matrix of size T-by-'number of parameters that change over path'
+ParamPath.alpha=0.4*ones(T,1); % For each parameter that changes value, ParamPath is matrix of size T-by-1
 % (the way ParamPath is set is designed to allow for a series of changes in the parameters)
-ParamPathNames={'alpha'};
+% ParamPathNames={'alpha'};
 
 % We need to give an initial guess for the price path on interest rates
-PricePath0=[linspace(p_eqm_init, p_eqm_final, floor(T/2))'; p_eqm_final*ones(T-floor(T/2),1)]; % PricePath0 is matrix of size T-by-'number of prices'
-PricePathNames={'r'};
+PricePath0.r=[linspace(p_eqm_init.r, p_eqm_final.r, floor(T/2))'; p_eqm_final.r*ones(T-floor(T/2),1)]; % For each price, PricePath0 is matrix of size T-by-1
+% PricePathNames={'r'};
 
 % Rewrite the General Eqm conditions as rules for updating the price
 transpathoptions.GEnewprice=1; % If you do not do this the codes can still solve, but take much longer as they must figure out an updating rule for themselves.
@@ -209,7 +195,7 @@ GeneralEqmEqns={GeneralEqmEqn_1};
 % initial and final equilibria)
 transpathoptions.weightscheme=1
 transpathoptions.verbose=1
-[PricePathNew]=TransitionPath_Case1(PricePath0, PricePathNames, ParamPath, ParamPathNames, T, V_final, StationaryDist_init, n_d, n_a, n_s, pi_s, d_grid,a_grid,s_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames,transpathoptions,vfoptions,simoptions);
+PricePathNew=TransitionPath_Case1(PricePath0, ParamPath, T, V_final, StationaryDist_init, n_d, n_a, n_s, pi_s, d_grid,a_grid,s_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames,transpathoptions);
 
 
 

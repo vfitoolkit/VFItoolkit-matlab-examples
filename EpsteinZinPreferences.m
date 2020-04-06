@@ -20,8 +20,7 @@
 %
 % Only place I 'cheat' relative to CFVRRY2012 is using a grid for capital which concentrates
 % points near the steady state. However this is anyway a standard
-% practice when creating grids for capital (CFVRRY2012 use a purely uniform
-% grid).
+% practice when creating grids for capital (CFVRRY2012 use a purely uniform grid).
 
 ParamCombination=2; %A number from 1 to 8; determines which values of psi & gamma to use.
 % ParamCombination=2 gives 'baseline' case of CFVRRY2012 (gamma=5, psi=0.5)
@@ -132,8 +131,7 @@ plot(sort(s_grid))
 %% Now, do the value function iteration
 vfoptions.howards=20;
 vfoptions.verbose=1;
-V0=zeros(n_a,n_s,'gpuArray');
-[V, Policy]=ValueFnIter_Case1(V0, n_d,n_a,n_s,d_grid,a_grid,s_grid, pi_s, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames, vfoptions);
+[V, Policy]=ValueFnIter_Case1(n_d,n_a,n_s,d_grid,a_grid,s_grid, pi_s, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames, vfoptions);
 
 %% Generate output based on the solution
 

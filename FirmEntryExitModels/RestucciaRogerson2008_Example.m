@@ -1,14 +1,13 @@
 % Replication of Restuccia & Rogerson (2008) - Policy Distortions and Aggregate Productivity with Heterogeneous Establishments
-
+%
 % Note: rho is defined differently here to in the paper. Here it does not
 % include the (exogenous) conditional probability of firm exit. In RR2008
 % it does. This is done to emphasize how to include exit/death in models
 % more generally when using VFI Toolkit.
-
+%
 % For explanation of model, the calibration choices, and what the policy
 % experiments are aiming to understand, see paper.
 
-Parallel=1; % 1 for (parallel) CPUs, 2 for GPU, 0 for single CPU
 
 %% Set some basic variables
 
@@ -143,14 +142,8 @@ DiscountFactorParamNames={'rho','oneminuslambda'};
 ReturnFn=@(aprime_val, a_val, z1_val,z2_val,w,r,alpha,gamma,taurate,subsidyrate,cf) RestucciaRogerson2008_ReturnFn(aprime_val, a_val, z1_val,z2_val,w,r,alpha,gamma,taurate,subsidyrate,cf);
 ReturnFnParamNames={'w','r','alpha','gamma','taurate','subsidyrate','cf'}; %It is important that these are in same order as they appear in 'RestucciaRogerson2008_ReturnFn'
 
-vfoptions.parallel=Parallel;
 % Check that everything is working so far by solving the value function
-if Parallel~=2
-    V0=zeros([n_a,n_z]);
-else
-    V0=zeros([n_a,n_z],'gpuArray');
-end
-[V,Policy]=ValueFnIter_Case1(V0, n_d,n_a,n_z,[],a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames, vfoptions);
+[V,Policy]=ValueFnIter_Case1(n_d,n_a,n_z,[],a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames);
 
 % If you wanted to look at the value fn
 % figure(2)
@@ -191,7 +184,6 @@ EntryExitParamNames.MassOfNewAgents={'Ne'}; % This is implied by the need for th
 EntryExitParamNames.CondlProbOfSurvival={'oneminuslambda'};
 % This conditional probability can be a state-dependent parameter, in which case this input would be a vector or matrix, etc.
 
-simoptions.parallel=Parallel;
 % Check that everything is working so far by solving the simulation of
 % agent distribution to get the stationary distribution.
 StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_z,pi_z, simoptions, Params, EntryExitParamNames);
@@ -270,7 +262,7 @@ n_p=0;
 disp('Calculating price vector corresponding to the stationary eqm')
 % tic;
 % NOTE: EntryExitParamNames has to be passed as an additional input compared to the standard case.
-[p_eqm,p_eqm_index, GeneralEqmCondition]=HeteroAgentStationaryEqm_Case1(V0, 0, n_a, n_z, n_p, pi_z, [], a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, GEPriceParamNames,heteroagentoptions, simoptions, vfoptions, EntryExitParamNames);
+[p_eqm,p_eqm_index, GeneralEqmCondition]=HeteroAgentStationaryEqm_Case1(0, n_a, n_z, n_p, pi_z, [], a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, GEPriceParamNames,heteroagentoptions, simoptions, [], EntryExitParamNames);
 % findeqmtime=toc
 Params.w=p_eqm.w;
 Params.ebar=p_eqm.ebar;
@@ -279,7 +271,7 @@ Params.ebar=p_eqm.ebar;
 % I get w=1.9074, ebar is all ones.
 
 % Calculate some things in the general eqm
-[V,Policy]=ValueFnIter_Case1(V0, n_d,n_a,n_z,[],a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames, vfoptions);
+[V,Policy]=ValueFnIter_Case1(n_d,n_a,n_z,[],a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames);
 StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_z,pi_z, simoptions, Params, EntryExitParamNames);
 
 % Impose the labour market clearance, which involves calculating Ne. See
@@ -287,7 +279,7 @@ StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_z,pi_z, simoptions, Params,
 FnsToEvaluateParamNames(1).Names={'alpha','gamma','r','w','taurate','subsidyrate'};
 FnsToEvaluateFn_nbar = @(aprime_val,a_val,z1_val,z2_val,mass,alpha,gamma,r,w,taurate,subsidyrate) ((1-((z2_val>=0)*taurate+(z2_val<0)*subsidyrate)*z2_val)*z1_val)^(1/(1-alpha-gamma)) *(alpha/r)^(alpha/(1-gamma-alpha)) *(gamma/w)^((1-alpha)/(1-gamma-alpha)); % which evaluates to Nbar in the aggregate
 FnsToEvaluate={FnsToEvaluateFn_nbar};
-AggValues=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions.parallel,simoptions,EntryExitParamNames);
+AggValues=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_z, d_grid, a_grid, z_grid, [], simoptions, EntryExitParamNames);
 InitialNe=Params.Ne;
 Params.Ne=1/AggValues; % AggValues is presently equal to Nbar. This line is imposing/satisfying the labour market clearance condition.
 StationaryDist.mass=StationaryDist.mass*(Params.Ne/InitialNe); % Take advantage of linearity of the stationary distribution in new entrants distribution.
@@ -329,9 +321,9 @@ FnsToEvaluateParamNames(3).Names={'alpha','gamma','r','w','taurate','subsidyrate
 FnsToEvaluateFn_output = @(aprime_val,a_val,z1_val,z2_val,mass, alpha,gamma,r,w,taurate,subsidyrate) ((1-((z2_val>=0)*taurate+(z2_val<0)*subsidyrate)*z2_val))^((alpha+gamma)/(1-gamma-alpha))*z1_val^(1/(1-gamma-alpha)) *(alpha/r)^(alpha/(1-gamma-alpha)) *(gamma/w)^(gamma/(1-gamma-alpha));
 FnsToEvaluate={FnsToEvaluateFn_kbar, FnsToEvaluateFn_nbar, FnsToEvaluateFn_output};
 
-ValuesOnGrid=EvalFnOnAgentDist_ValuesOnGrid_Case1_Mass(StationaryDist.pdf,StationaryDist.mass, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames,EntryExitParamNames, n_d, n_a, n_z, [], a_grid, z_grid, Parallel,simoptions);
+ValuesOnGrid=EvalFnOnAgentDist_ValuesOnGrid_Case1_Mass(StationaryDist.pdf,StationaryDist.mass, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames,EntryExitParamNames, n_d, n_a, n_z, [], a_grid, z_grid, [], simoptions);
 
-ProbDensityFns=EvalFnOnAgentDist_pdf_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_z, [], a_grid, z_grid, simoptions.parallel,simoptions,EntryExitParamNames);
+ProbDensityFns=EvalFnOnAgentDist_pdf_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_z, [], a_grid, z_grid, [], simoptions, EntryExitParamNames);
 
 % s_grid.^(1/(1-Params.gamma-Params.alpha))
 nbarValues=shiftdim(ValuesOnGrid(2,:,:,:),1);
@@ -395,7 +387,7 @@ FnsToEvaluateFn_outputofsubsidised = @(aprime_val,a_val,z1_val,z2_val,mass, alph
 
 FnsToEvaluate={FnsToEvaluateFn_kbar, FnsToEvaluateFn_nbar, FnsToEvaluateFn_output, FnsToEvaluateFn_subsidy, FnsToEvaluateFn_outputofsubsidised};
 
-AggValues=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions.parallel,simoptions,EntryExitParamNames);
+AggValues=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_z, d_grid, a_grid, z_grid, [], simoptions, EntryExitParamNames);
 
 Output.Y=AggValues(3);
 Output.N=AggValues(2);

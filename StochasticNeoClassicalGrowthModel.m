@@ -1,19 +1,20 @@
 % Neoclassical Stochastic Growth Model
 % Example based on Diaz-Gimenez (2001) - Linear Quadratic Approximations: An Introduction 
 % (Chapter 2 in 'Computational Methods for the Study of Dynamic Economies', edited by Marimon & Scott)
-
+%
 % This model is also used by Aldrich, Fernandez-Villaverde, Gallant, & Rubio-Ramirez (2011) - "Tapping the supercomputer under your desk: Solving dynamic equilibrium models with graphics processors,"
 % But they do use slightly different parameters to those used here.
+%
+% If using without GPU it is recommended to change value of n_k (line 17 of code)
+
 
 Javier=0;   %If you set this parameter to 0 then the parameters will all be set to those used by Aldrich, Fernandez-Villaverde, Gallant, & Rubio-Ramirez (2011)
 
 %% Set up
-tauchenoptions.parallel=2; % Use GPU (is anyway the default option)
-vfoptions.parallel=2; % Use GPU (is anyway the default option)
 
 % The sizes of the grids
 n_z=2^2;
-n_k=2^12;
+n_k=2^12; % Note: GPU can easily handle this, CPUs will struggle, I recommend setting to 2^9 if using CPUs.
 
 %Discounting rate
 beta = 0.96;
@@ -51,7 +52,7 @@ X_ss= delta*K_ss;
 %% Create grids (grids are defined as a column vectors)
 
 q=3; % A parameter needed for the Tauchen Method
-[z_grid, pi_z]=TauchenMethod(0,sigmasq_epsilon,rho,n_z,q,tauchenoptions); %[states, transmatrix]=TauchenMethod_Param(mew,sigmasq,rho,znum,q), transmatix is (z,zprime)
+[z_grid, pi_z]=TauchenMethod(0,sigmasq_epsilon,rho,n_z,q); %[states, transmatrix]=TauchenMethod_Param(mew,sigmasq,rho,znum,q), transmatix is (z,zprime)
 
 k_grid=linspace(0,20*K_ss,n_k)'; % Grids should always be declared as column vectors
 
@@ -68,8 +69,7 @@ d_grid=0; %no d variable
 n_d=0; %no d variable
 
 tic;
-V0=ones(n_k,n_z);
-[V, Policy]=ValueFnIter_Case1(V0, n_d,n_k,n_z,d_grid,k_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames, vfoptions);
+[V, Policy]=ValueFnIter_Case1(n_d,n_k,n_z,d_grid,k_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames, vfoptions);
 time=toc;
 
 fprintf('Time to solve the value function iteration was %8.2f seconds. \n', time)

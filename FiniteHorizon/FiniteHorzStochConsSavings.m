@@ -1,14 +1,15 @@
 % This code implements a simple ten-period stochastic consumption savings
 % problem to demonstrate the finite value function command of the VFI
 % Toolkit.
-
+%
 % Main strength of the finite value function command is that you simply
 % declare parameters that depend on age as row vectors, and the VFI Toolkit
 % automatically realizes that these are age dependent.
-
-
+%
 % Agents live ten periods. Income consists of a deterministic function of
 % age Wj plus an AR(1) shock Wz.
+%
+% This code will only work with GPU
 
 % Age
 % One endogenous variable: assets

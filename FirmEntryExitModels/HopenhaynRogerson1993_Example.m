@@ -1,8 +1,5 @@
 % Example based on Hopenhayn & Rogerson (1993) - Job Turnover and Policy Evaluation: A General Equilibrium Analysis
 
-% 0: single cpu, 1: parallel cpus, 2: gpu
-Parallel=2
-
 % Footnote 5 on page 922 states "Note that we are assuming that a new entrant bears only the fixed
 % cost of entry and does not pay the cost cf". This example follows this (requires a 'trick' extra point in the grids).
 
@@ -29,10 +26,9 @@ Params.sigma_logz=sqrt(0.53); % Hopenhayn & Rogerson (1993)
 Params.sigma_epsilon=sqrt((1-Params.rho)*((Params.sigma_logz)^2));
 Params.a=0.078; % Hopenhayn & Rogerson (1993) do not report, but Martin Flodén figures out the following (pg 5): http://martinfloden.net/files/macrolab.pdf
 
-tauchenoptions.parallel=Parallel;
 n_z=20; % I here call z, what Hopenhayn & Rogerson (1993) call s. The choice of n_z=20 follows them.
 Params.q=4; % Hopenhayn & Rogerson (1993) do not report (based on Table 4 is seems something around q=4 is used, otherwise don't get values of z anywhere near as high as 27.3. (HR1993 have typo and call the column 'log(s)' when it should be 's') 
-[z_grid, pi_z]=TauchenMethod(Params.a,Params.sigma_epsilon^2,Params.rho,n_z,Params.q,tauchenoptions); %[states, transmatrix]=TauchenMethod_Param(mew,sigmasq,rho,znum,q,Parallel,Verbose), transmatix is (z,zprime)
+[z_grid, pi_z]=TauchenMethod(Params.a,Params.sigma_epsilon^2,Params.rho,n_z,Params.q); %[states, transmatrix]=TauchenMethod_Param(mew,sigmasq,rho,znum,q), transmatix is (z,zprime)
 z_grid=exp(z_grid);
 
 %%
@@ -65,13 +61,7 @@ vfoptions.ReturnToExitFn=@(a_val, z_val,tau) -tau*a_val*(a_val~=10^6); % the exi
 vfoptions.ReturnToExitFnParamNames={'tau'}; %It is important that these are in same order as they appear in 'Hopenhayn1992_ReturnToExitFn'
 
 % Check that everything is working so far by solving the value function
-vfoptions.parallel=Parallel;
-if vfoptions.parallel==2
-    V0=zeros(n_a,n_z,'gpuArray');
-else
-    V0=zeros(n_a,n_z);
-end
-[V,Policy,ExitPolicy]=ValueFnIter_Case1(V0, n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames, vfoptions);
+[V,Policy,ExitPolicy]=ValueFnIter_Case1(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames, vfoptions);
 
 % When tau=0 there is a cut-off value of z below which all firms exit, and which is independent of n.
 % This can be easily seen graphing the whole of the ExitPolicy, which takes
@@ -119,7 +109,6 @@ Params.zeta=1-ExitPolicy;
 % This conditional probability can be a state-dependent parameter, in which case this input would be a vector or matrix, etc.
 
 % Check that everything is working so far by solving the simulation of agent distribution to get the stationary distribution.
-simoptions.parallel=Parallel;
 simoptions % Show which options are being set
 StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_z,pi_z, simoptions,Params,EntryExitParamNames);
 
@@ -163,7 +152,7 @@ FnsToEvaluateFn_1 = @(aprime_val,a_val,z_val,agentmass,alpha) z_val*(aprime_val^
 FnsToEvaluate={FnsToEvaluateFn_1};
 
 % Just to test: (note, is same command as usual, just need to include the optional extra inputs 'simoptions' and 'EntryExitParamNames' which contains all the needed info about entry/exit)
-AggVars=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions.parallel,simoptions,EntryExitParamNames);
+AggVars=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions,EntryExitParamNames);
 
 % The general equilibrium condition is that the EV^e-ce=0.
 % This does not fit standard format for general equilibrium conditions.
@@ -189,16 +178,16 @@ n_p=0;
 disp('Calculating price vector corresponding to the stationary eqm')
 % tic;
 % NOTE: EntryExitParamNames has to be passed as an additional input compared to the standard case.
-[p_eqm,p_eqm_index, GeneralEqmCondition]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_z, n_p, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, GEPriceParamNames,heteroagentoptions, simoptions, vfoptions, EntryExitParamNames);
+[p_eqm,p_eqm_index, GeneralEqmCondition]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_z, n_p, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, GEPriceParamNames,heteroagentoptions, simoptions, vfoptions, EntryExitParamNames);
 % findeqmtime=toc
 
 Params.ce=p_eqm.ce;
 Params.Ne=p_eqm.Ne;
 
 %% Calculate some relevant things in eqm
-[V,Policy,ExitPolicy]=ValueFnIter_Case1(V0, n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames, vfoptions);
+[V,Policy,ExitPolicy]=ValueFnIter_Case1(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames, vfoptions);
 Params.zeta=1-ExitPolicy;
-StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_z,pi_z, simoptions,Params,EntryExitParamNames);
+StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_z,pi_z, simoptions, Params, EntryExitParamNames);
 
 % save ./SavedOutput/HopenhaynRogerson1993.mat Params V Policy ExitPolicy StationaryDist
 
@@ -215,9 +204,9 @@ FnsToEvaluateFn_Firing = @(aprime_val,a_val,z_val,AgentDistMass) -(aprime_val-a_
 FnsToEvaluate={FnsToEvaluateFn_Emp, FnsToEvaluateFn_Hiring, FnsToEvaluateFn_Firing};
 
 % We will want the aggregate values of these. 
-AggValues=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions.parallel,simoptions,EntryExitParamNames);
+AggValues=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_z, d_grid, a_grid, z_grid, [],simoptions,EntryExitParamNames);
 % For much of Panel B we just need the pdf of the relevant measure (employment, hiring, firing)
-ProbDensityFns=EvalFnOnAgentDist_pdf_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions.parallel,simoptions,EntryExitParamNames);
+ProbDensityFns=EvalFnOnAgentDist_pdf_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_z, d_grid, a_grid, z_grid, [],simoptions,EntryExitParamNames);
 % We need a simulated panel based on whole distributions (for calculating
 % variance of growth rates and serial correlation in log(n); for survivors).
 % Note that because of these two moments we want to calculate it makes more

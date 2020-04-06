@@ -1,4 +1,6 @@
-%%% Example using a variant of the Basic RBC model (following Aruoba, Fernandez-Villaverde, & Rubio-Ramirez, 2006)
+% Example using a variant of the Basic RBC model (following Aruoba, Fernandez-Villaverde, & Rubio-Ramirez, 2006)
+%
+% Note: On GPU this will take fractions of a second, on CPUs you will want to make the grids smaller (n_d,n_a,n_z) or it will take a while.
 
 tic;
 UseAlternativeParams=1;
@@ -59,8 +61,7 @@ ReturnFnParams={'alpha','delta','theta','tau'}; %It is important that these are 
 
 %% Solve
 %Do the value function iteration. Returns both the value function itself, and the optimal policy function.
-V0=zeros(n_a,n_z);
-[V,Policy]=ValueFnIter_Case1(V0, n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParams);
+[V,Policy]=ValueFnIter_Case1(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParams);
 time1=toc;
 
 %% Report some output

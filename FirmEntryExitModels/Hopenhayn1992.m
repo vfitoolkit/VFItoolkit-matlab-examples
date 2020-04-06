@@ -1,9 +1,9 @@
-% Hopenhayn (1992) - Entry, Exit and Firm Dynamics in Long Run Equilibrium
+ % Hopenhayn (1992) - Entry, Exit and Firm Dynamics in Long Run Equilibrium
 % While this code implements the framework of Hopenhayn (1992) the model/example itself
 % is taken from slides of Chris Edmond: http://www.chrisedmond.net/phd2019/econ90003_lecture19.pdf
 % The numerical example begins on slide 27.
 % This involves solving a stationary competitive equilibrium.
-
+%
 % Hopyenhayn (1992) does contain an 'Example' on pg 1144, but it is kind of silly.
 % There is a distribution of entrants at two productivity levels, 0 and 1, with mass 0.9 of 
 % former and mass 0.1 of later (v({0})=0.9 and v({1})=0.1 in notation of the paper). 
@@ -20,8 +20,6 @@
 % equilibria in a closely related model, although in their case it arises from no entry nor exit in equilibrium,
 % rather than entry and immediate exit as here.]
 
-vfoptions.parallel=0
-simoptions.parallel=0
 
 %%
 n_z=101; % I here call z, what Hopenhayn calls 'varphi'; namely the firm-specific (permanent) productivity level.
@@ -41,9 +39,8 @@ Params.rho=0.9;
 Params.sigma_epsilon=0.2;
 Params.logzbar=1.4;
 
-tauchenoptions.parallel=vfoptions.parallel;
 Params.q=4;
-[z_grid, pi_z]=TauchenMethod((1-Params.rho)*Params.logzbar,Params.sigma_epsilon^2,Params.rho,n_z,Params.q,tauchenoptions); %[states, transmatrix]=TauchenMethod_Param(mew,sigmasq,rho,znum,q,Parallel,Verbose), transmatix is (z,zprime)
+[z_grid, pi_z]=TauchenMethod((1-Params.rho)*Params.logzbar,Params.sigma_epsilon^2,Params.rho,n_z,Params.q); %[states, transmatrix]=TauchenMethod_Param(mew,sigmasq,rho,znum,q), transmatix is (z,zprime)
 % Compute the stationary distribution of this Markov (this could be done more easily/directly/analytically)
 pistar_z=ones(size(z_grid))/n_z; % Initial guess
 dist=1;
@@ -90,13 +87,8 @@ vfoptions.ReturnToExitFn=@(a_val, s_val) 0;
 vfoptions.ReturnToExitFnParamNames={}; %It is important that these are in same order as they appear in 'Hopenhayn1992_ReturnToExitFn'
 
 % Check that everything is working so far by solving the value function
-if vfoptions.parallel==2
-    V0=zeros(n_a,n_z,'gpuArray');
-else
-    V0=zeros(n_a,n_z);
-end
 vfoptions % print them to screen
-[V,Policy,ExitPolicy]=ValueFnIter_Case1(V0, n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames, vfoptions);
+[V,Policy,ExitPolicy]=ValueFnIter_Case1(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames, vfoptions);
 
 %% Stationary Distribution of Agents with entry and exit
 % Both entry and exit matter for stationary distribution of agents. 
@@ -177,7 +169,7 @@ FnsToEvaluate={FnsToEvaluateFn_1};
 % mass, and this is automatically used internally to make all relevant
 % changes to the algorithms)
 simoptions.keeppolicyonexit=1; % Is not needed for simulation, but is needed for EvalFnOnAgentDist.
-AggVars=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions.parallel, simoptions, EntryExitParamNames);
+AggVars=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_z, d_grid, a_grid, z_grid, [], simoptions, EntryExitParamNames);
 
 % The general equilibrium condition is that the EV^e-ce=0.
 % This does not fit standard format for general equilibrium conditions.
@@ -204,7 +196,7 @@ n_p=0;
 disp('Calculating price vector corresponding to the stationary eqm')
 % tic;
 % NOTE: EntryExitParamNames has to be passed as an additional input compared to the standard case.
-[p_eqm_initial,p_eqm_index_initial, GeneralEqmCondition_initial]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_z, n_p, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, GEPriceParamNames,heteroagentoptions, simoptions, vfoptions, EntryExitParamNames);
+[p_eqm_initial,p_eqm_index_initial, GeneralEqmCondition_initial]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_z, n_p, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, GEPriceParamNames,heteroagentoptions, simoptions, vfoptions, EntryExitParamNames);
 % findeqmtime=toc
 Params.p=p_eqm_initial.p;
 Params.Ne=p_eqm_initial.Ne;

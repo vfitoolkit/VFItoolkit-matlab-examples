@@ -1,11 +1,13 @@
 % Example based on Aiyagari (1994).
-
+%
 % These codes set up and solve the Aiyagari (1994) model for a given
 % parametrization. After solving the model they then show how some of the
 % vfitoolkit commands to easily calculate things like the Gini coefficient
 % for income, and how to plot the distribution of asset holdings.
-
-Parallel=1 % 2 for GPU, 1 for parallel CPU, 0 for single CPU.
+%
+% VFI Toolkit automatically detects hardware (GPU? Number of CPUs?) and
+% sets defaults accordingly. It will run without a GPU, but slowly. It is
+% indended for use with GPU.
 
 %% Set some basic variables
 
@@ -28,26 +30,21 @@ Params.q=3; %Footnote 33 of Aiyagari(1993WP, pg 25) implicitly says that he uses
 CreateIndividualParams(Params)
 
 %% Some Toolkit options (most of these are anyway just being set to toolkit defaults)
-tauchenoptions.parallel=Parallel;
-
 mcmomentsoptions.T=10^4;
 mcmomentsoptions.Tolerance=10^(-9);
-mcmomentsoptions.parallel=tauchenoptions.parallel;
 
 vfoptions.lowmemory=0;
-vfoptions.parallel=Parallel;
 
 simoptions.burnin=10^4;
 simoptions.simperiods=10^5; % For an accurate solution you will either need simperiod=10^5 and iterate=1, or simperiod=10^6 (iterate=0).
 simoptions.iterate=1;
-simoptions.parallel=Parallel; %Use GPU
 
 heteroagentoptions.verbose=1;
 
 %% Set up the exogenous shock process
 %Create markov process for the exogenous labour productivity, l.
 % q=3; %Footnote 33 of Aiyagari(1993WP, pg 25) implicitly says that he uses q=3
-[s_grid, pi_s]=TauchenMethod(0,(Params.sigma^2)*(1-Params.rho^2),Params.rho,n_s,Params.q,tauchenoptions); %[states, transmatrix]=TauchenMethod_Param(mew,sigmasq,rho,znum,q,Parallel,Verbose), transmatix is (z,zprime)
+[s_grid, pi_s]=TauchenMethod(0,(Params.sigma^2)*(1-Params.rho^2),Params.rho,n_s,Params.q);
 
 %[s_grid, pi_s]=TauchenMethod_Param(0,(sigma^2)*(1-rho^2),rho,7,3); %This is the process for ln(l). Aiyagari uses 7 states, 
 [s_mean,s_variance,s_corr,~]=MarkovChainMoments(s_grid,pi_s,mcmomentsoptions);
@@ -128,29 +125,24 @@ Params.r=0.04;
 
 %%
 % Initial guess for value function.
-if Parallel==2
-    V0=ones(n_a,n_s,'gpuArray'); %(a,s)
-else
-    V0=ones(n_a,n_s); %(a,s)
-end
 disp('Calculating price vector corresponding to the stationary eqm')
-[p_eqm,~,GeneralEqmCondn]=HeteroAgentStationaryEqm_Case1(V0, n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, GEPriceParamNames,heteroagentoptions, simoptions, vfoptions);
+[p_eqm,~,GeneralEqmCondn]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, GEPriceParamNames,heteroagentoptions, simoptions, vfoptions);
 
 p_eqm
 
 %% Now that we have the GE, let's calculate a bunch of related objects
 % Equilibrium wage
-Params.w=(1-Params.alpha)*((p_eqm+Params.delta)/Params.alpha)^(Params.alpha/(Params.alpha-1));
+Params.w=(1-Params.alpha)*((p_eqm.r+Params.delta)/Params.alpha)^(Params.alpha/(Params.alpha-1));
 
 disp('Calculating various equilibrium objects')
-Params.r=p_eqm;
-[~,Policy]=ValueFnIter_Case1(V0, n_d,n_a,n_s,d_grid,a_grid,s_grid, pi_s, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames, vfoptions);
+Params.r=p_eqm.r;
+[~,Policy]=ValueFnIter_Case1(n_d,n_a,n_s,d_grid,a_grid,s_grid, pi_s, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames, vfoptions);
 
-% PolicyValues=PolicyInd2Val_Case1(Policy,n_d,n_a,n_s,d_grid,a_grid, Parallel);
+% PolicyValues=PolicyInd2Val_Case1(Policy,n_d,n_a,n_s,d_grid,a_grid);
 
 StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_s,pi_s, simoptions);
 
-AggVars=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate,Params, FnsToEvaluateParamNames,n_d, n_a, n_s, d_grid, a_grid,s_grid,Parallel);
+AggVars=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate,Params, FnsToEvaluateParamNames,n_d, n_a, n_s, d_grid, a_grid,s_grid);
 
 % save ./SavedOutput/Aiyagari1994SSObjects.mat p_eqm Policy StationaryDist
 
@@ -170,7 +162,7 @@ FnsToEvaluate_Income = @(aprime_val,a_val,s_val,r,w) w*s_val+(1+r)*a_val;
 FnsToEvaluateParamNames(3).Names={};
 FnsToEvaluate_Wealth = @(aprime_val,a_val,s_val) a_val;
 FnsToEvaluateFnIneq={FnsToEvaluate_Earnings, FnsToEvaluate_Income, FnsToEvaluate_Wealth};
-StationaryDist_LorenzCurves=EvalFnOnAgentDist_LorenzCurve_Case1(StationaryDist, Policy, FnsToEvaluateFnIneq, Params,FnsToEvaluateParamNames, n_d, n_a, n_s, d_grid, a_grid, s_grid, Parallel);
+StationaryDist_LorenzCurves=EvalFnOnAgentDist_LorenzCurve_Case1(StationaryDist, Policy, FnsToEvaluateFnIneq, Params,FnsToEvaluateParamNames, n_d, n_a, n_s, d_grid, a_grid, s_grid);
 
 % 3.5 The Distributions of Earnings and Wealth
 %  Gini for Earnings
@@ -181,7 +173,7 @@ WealthGini=Gini_from_LorenzCurve(StationaryDist_LorenzCurves(3,:));
 % Calculate inverted Pareto coeff, b, from the top income shares as b=1/[log(S1%/S0.1%)/log(10)] (formula taken from Excel download of WTID database)
 % No longer used: Calculate Pareto coeff from Gini as alpha=(1+1/G)/2; ( http://en.wikipedia.org/wiki/Pareto_distribution#Lorenz_curve_and_Gini_coefficient)
 % Recalculte Lorenz curves, now with 1000 points
-StationaryDist_LorenzCurves=EvalFnOnAgentDist_LorenzCurve_Case1(StationaryDist, Policy, FnsToEvaluateFnIneq, Params,FnsToEvaluateParamNames, n_d, n_a, n_s, d_grid, a_grid, s_grid, Parallel,1000);
+StationaryDist_LorenzCurves=EvalFnOnAgentDist_LorenzCurve_Case1(StationaryDist, Policy, FnsToEvaluateFnIneq, Params,FnsToEvaluateParamNames, n_d, n_a, n_s, d_grid, a_grid, s_grid, [],1000);
 EarningsParetoCoeff=1/((log(StationaryDist_LorenzCurves(1,990))/log(StationaryDist_LorenzCurves(1,999)))/log(10)); %(1+1/EarningsGini)/2;
 IncomeParetoCoeff=1/((log(StationaryDist_LorenzCurves(2,990))/log(StationaryDist_LorenzCurves(2,999)))/log(10)); %(1+1/IncomeGini)/2;
 WealthParetoCoeff=1/((log(StationaryDist_LorenzCurves(3,990))/log(StationaryDist_LorenzCurves(3,999)))/log(10)); %(1+1/WealthGini)/2;
@@ -194,7 +186,7 @@ WealthParetoCoeff=1/((log(StationaryDist_LorenzCurves(3,990))/log(StationaryDist
 fprintf('For parameter values sigma=%.2f, mu=%.2f, rho=%.2f \n', [Params.sigma,Params.mu,Params.rho])
 fprintf('The table 1 elements are sigma=%.4f, rho=%.4f \n',[sqrt(s_variance), s_corr])
 
-fprintf('The equilibrium value of the interest rate is r=%.4f \n', p_eqm*100)
+fprintf('The equilibrium value of the interest rate is r=%.4f \n', p_eqm.r*100)
 fprintf('The equilibrium value of the aggregate savings rate is s=%.4f \n', aggsavingsrate)
 %fprintf('Time required to find the eqm was %.4f seconds \n',findeqmtime)
 

@@ -1,6 +1,8 @@
-%%% Example using a variant of the Basic RBC model (following Aruoba, Fernandez-Villaverde, & Rubio-Ramirez, 2006)
-
+% Example using a variant of the Basic RBC model (following Aruoba, Fernandez-Villaverde, & Rubio-Ramirez, 2006)
+%
 % Aruoba, Fernandez-Villaverde, & Rubio-Ramirez (2006) discuss solving this model with a wide variety of different numerical solution methods.
+%
+% This code only works with GPU due to some 'hard-coding' that depends on it.
 
 disp('Running BasicRealBusinessCycleModel_NumericalErrors.m')
 

@@ -1,4 +1,4 @@
-%%% Example using a variant of the Basic RBC model (following Aruoba, Fernandez-Villaverde, & Rubio-Ramirez, 2006)
+% Example using a variant of the Basic RBC model (following Aruoba, Fernandez-Villaverde, & Rubio-Ramirez, 2006)
 
 disp('Running BasicRealBusinessCycleModel_BusinessCycleStatistics.m')
 
@@ -9,7 +9,6 @@ BasicRealBusinessCycleModel
 % First we generate a time series of indexes for the d,a & z variables (of
 % size (num_d_vars+num_a_vars+num_a_vars+num_z_vars,periods)) (the first
 % num_a_vars is for aprime).
-simoptions.parallel=2;
 simoptions.seedpoint=[ceil(n_a/2),ceil(n_z/2)];
 simoptions.burnin=1000;
 simoptions.simperiods=1000;
