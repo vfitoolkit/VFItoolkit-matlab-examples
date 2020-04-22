@@ -177,7 +177,7 @@ heteroagentoptions.specialgeneqmcondn={0,'entry'};
 % Certain kinds of general equilibrium conditions that are non-standard can
 % be used via heteroagentoptions.specialgeneqmcondn
 GeneralEqmEqnParamNames(1).Names={'Dbar'};
-GeneralEqmEqn_1 = @(AggVars,p,Dbar) AggVars/Dbar-p(1); %The requirement that the price is determined by the demand eqn
+GeneralEqmEqn_1 = @(AggVars,p,Dbar) Dbar/AggVars-p(1); %The requirement that the price is determined by the demand eqn
 GeneralEqmEqnParamNames(2).Names={'beta','ce'};
 GeneralEqmEqn_Entry = @(EValueFn,p,beta,ce) beta*EValueFn-ce; % Free entry conditions (expected returns equal zero in eqm).
 GeneralEqmEqns={GeneralEqmEqn_1, GeneralEqmEqn_Entry};
