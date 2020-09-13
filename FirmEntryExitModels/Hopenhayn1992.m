@@ -1,4 +1,4 @@
- % Hopenhayn (1992) - Entry, Exit and Firm Dynamics in Long Run Equilibrium
+% Hopenhayn (1992) - Entry, Exit and Firm Dynamics in Long Run Equilibrium
 % While this code implements the framework of Hopenhayn (1992) the model/example itself
 % is taken from slides of Chris Edmond: http://www.chrisedmond.net/phd2019/econ90003_lecture19.pdf
 % The numerical example begins on slide 27.
