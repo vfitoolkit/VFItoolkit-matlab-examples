@@ -88,7 +88,9 @@ vfoptions.ReturnToExitFnParamNames={}; %It is important that these are in same o
 
 % Check that everything is working so far by solving the value function
 vfoptions % print them to screen
+tic;
 [V,Policy,ExitPolicy]=ValueFnIter_Case1(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames, vfoptions);
+toc
 
 %% Stationary Distribution of Agents with entry and exit
 % Both entry and exit matter for stationary distribution of agents. 
@@ -107,7 +109,7 @@ Params.pistar_z=pistar_z;
 % Note: VFI Toolkit requires the DistOfNewAgents to be a pdf (so unit mass), and then uses
 % the 'MassOfNewAgents' to understand how many there will be entering
 % relative to existing agents. (MassOfExistingAgents is kept track of.)
-Params.Ne=1;
+Params.Ne=0.1;
 EntryExitParamNames.MassOfNewAgents={'Ne'};
 % EntryExitParamNames.MassOfExistingAgents={'N'};
 % simoptions.MassOfNewAgents=1;
