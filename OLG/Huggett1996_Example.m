@@ -239,9 +239,9 @@ GeneralEqmConditionsVec=real(GeneralEqmConditions_Case1(AggVars,[Params.r,Params
 % used to 'search' can be done with heteroagentoptions.fminalgo)
 heteroagentoptions.verbose=1;
 [p_eqm,p_eqm_index, GeneralEqmEqnsValues]=HeteroAgentStationaryEqm_Case1_FHorz(jequaloneDist,AgeWeightsParamNames,0, n_a, n_z, N_j, 0, pi_z, 0, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, GEPriceParamNames, heteroagentoptions, simoptions, vfoptions);
-Params.r=p_eqm(1);
-Params.b=p_eqm(2);
-Params.T=p_eqm(3);
+Params.r=p_eqm.r;
+Params.b=p_eqm.b;
+Params.T=p_eqm.T;
 save ./SavedOutput/Huggett1996.mat Params
 
 % Using p_grid. This can be helpful if you want to, e.g., look for
