@@ -222,7 +222,7 @@ GrowthRateEmploy=(SimPanel_Survivors(1,2,:)-SimPanel_Survivors(1,1,:))./SimPanel
 VarianceOfGrowthRate_survivors=var(GrowthRateEmploy);
 SerialCorrelationLogn_survivors=corr(log(shiftdim(SimPanel_Survivors(1,2,:),2)),log(shiftdim(SimPanel_Survivors(1,1,:),2)));
 % We need a simulated panel based on new entrants for some (e.g., for stats by cohort)
-simoptions.noentryinpanel=1; % Don't want further entry in this panel data simulation
+simoptions.entryinpanel=1; % Don't want further entry in this panel data simulation
 simoptions.simperiods=20; % We anyway only need 10 for the stats being reported
 simoptions.numbersims=10^4; % Default is 1000, this was not enough to get stable/smooth estimate of 'hazard rates by cohort'
 EntrantDist.pdf=Params.upsilon;
