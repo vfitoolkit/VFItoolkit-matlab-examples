@@ -101,7 +101,7 @@ FnsToEvaluate={FnsToEvaluateFn_K,FnsToEvaluateFn_L};
 GeneralEqmEqnParamNames(1).Names={'alpha','delta'};
 GeneralEqmEqn_r = @(AggVars,p,alpha,delta) p(1)-(alpha*(AggVars(1)^(alpha-1))*(AggVars(2)^(1-alpha))-delta); %The requirement that the interest rate corresponds to the marginal product of capital (net of depreciation)
 GeneralEqmEqnParamNames(2).Names={'alpha'};
-GeneralEqmEqn_w = @(AggVars,p,alpha) p(2)-((1-alpha)*(AggVars(1)^(alpha))*(AggVars(2)^(alpha))); %The requirement that the wage corresponds to marginal product of labor
+GeneralEqmEqn_w = @(AggVars,p,alpha) p(2)-((1-alpha)*(AggVars(1)^(alpha))*(AggVars(2)^(-alpha))); %The requirement that the wage corresponds to marginal product of labor
 GeneralEqmEqns={GeneralEqmEqn_r,GeneralEqmEqn_w};
 
 %%
