@@ -235,7 +235,7 @@ GeneralEqmEqn_3 = @(AggVars,GEprices) GEprices(3)*AggVars(5)-AggVars(7); % Equat
 GeneralEqmEqnParamNames(4).Names={};
 GeneralEqmEqn_4 = @(AggVars,GEprices) GEprices(4)-AggVars(3); % Equation (17): Accidental bequests (adjusted for population growth) are equal to transfers received (this is essentially eqn 14)
 GeneralEqmEqnParamNames(5).Names={'A','alpha'};
-GeneralEqmEqn_5 = @(AggVars,GEprices,A,alpha) GEprices(5)-A*(1-alpha)*(AggVars(1)^(alpha))*(AggVars(2)^(-alpha)); % Rate of return on assets is related to Marginal Product of Capital
+GeneralEqmEqn_5 = @(AggVars,GEprices,A,alpha) GEprices(5)-A*(1-alpha)*(AggVars(1)^(alpha))*(AggVars(2)^(-alpha)); % wage is related to Marginal Product of Labor
 GeneralEqmEqns={GeneralEqmEqn_1, GeneralEqmEqn_2, GeneralEqmEqn_3, GeneralEqmEqn_4, GeneralEqmEqn_5};
 
 %% Test
