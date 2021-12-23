@@ -1,6 +1,5 @@
 % This code implements a simple ten-period stochastic consumption savings
-% problem to demonstrate the finite value function command of the VFI
-% Toolkit.
+% problem to demonstrate the finite value function command of the VFI Toolkit.
 %
 % Main strength of the finite value function command is that you simply
 % declare parameters that depend on age as row vectors, and the VFI Toolkit
@@ -8,8 +7,6 @@
 %
 % Agents live ten periods. Income consists of a deterministic function of
 % age Wj plus an AR(1) shock Wz.
-%
-% This code will only work with GPU
 
 % Age
 % One endogenous variable: assets
@@ -42,9 +39,7 @@ Params.Wj=[1,2,3,5,7,8,8,5,4,4]; % deterministic income depends on age
 % Stochastic Wz: use Tauchen method to discretize the AR(1) process log(Wz):
 Params.Wz_rho=0.7;
 Params.Wz_sigmasqepsilon=0.05;
-Params.Wz_sigmasqu=Params.Wz_sigmasqepsilon./(1-Params.Wz_rho.^2);
-Params.q=3; % For tauchen method
-[z_grid, pi_z]=TauchenMethod(0,Params.Wz_sigmasqu, Params.Wz_rho, n_z, Params.q);
+[z_grid,pi_z]=discretizeAR1_FarmerToda(0,Params.Wz_rho,Params.Wz_sigmasqepsilon,n_z); % Farmer-Toda discretizes an AR(1) (is better than Tauchen, & better than Rouwenhorst for rho<0.99)
 
 %% Grids
 maxa=150;
@@ -54,19 +49,19 @@ a_grid=linspace(0,maxa,n_a)'; % Could probably do better by adding more grid poi
 DiscountFactorParamNames={'beta'};
 
 ReturnFn=@(aprime,a,Wz,gamma,r,Wj) FiniteHorzStochConsSavings_ReturnFn(aprime,a,Wz,gamma,r,Wj)
-ReturnFnParamNames={'gamma','r','Wj'}; %It is important that these are in same order as they appear in 'FiniteHorzStochConsSavings_ReturnFn'
+% For the return function the first inputs must be (any decision variables), next period endogenous
+% state, this period endogenous state (any exogenous shocks). After that come any parameters.
 
 %% Now solve the value function iteration problem
 
 vfoptions.verbose=0;
 tic;
-[V, Policy]=ValueFnIter_Case1_FHorz(0,n_a,n_z,N_j, 0, a_grid, z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames,vfoptions);
+[V, Policy]=ValueFnIter_Case1_FHorz(0,n_a,n_z,N_j, 0, a_grid, z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [],vfoptions);
 toc
 
 % max(max(max(max(Policy))))<n_a % Double check that never try to leave top of asset grid.
 
 % V is assets-by-Wz-by-age
-
 
 %% Plot of how Value function in asset holdings and age 
 % (three subplots for minimum, maximum, and average values of stochastic component of income)

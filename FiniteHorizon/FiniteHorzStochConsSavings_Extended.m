@@ -43,9 +43,7 @@ Params.Wj=[1,2,3,5,7,8,8,5,4,4]; % deterministic income depends on age
 % Stochastic Wz: use Tauchen method to discretize the AR(1) process log(Wz):
 Params.Wz_rho=0.7;
 Params.Wz_sigmasqepsilon=0.05;
-Params.Wz_sigmasqu=Params.Wz_sigmasqepsilon./(1-Params.Wz_rho.^2);
-Params.q=3; % For tauchen method
-[z_grid, pi_z]=TauchenMethod(0,Params.Wz_sigmasqu, Params.Wz_rho, n_z, Params.q);
+[z_grid,pi_z]=discretizeAR1_FarmerToda(0,Params.Wz_rho,Params.Wz_sigmasqepsilon,n_z); % Farmer-Toda discretizes an AR(1) (is better than Tauchen, & better than Rouwenhorst for rho<0.99)
 
 %% Grids
 maxa=150;
@@ -55,13 +53,12 @@ a_grid=linspace(0,maxa,n_a)'; % Could probably do better by adding more grid poi
 DiscountFactorParamNames={'beta'};
 
 ReturnFn=@(aprime,a,Wz,gamma,r,Wj) FiniteHorzStochConsSavings_ReturnFn(aprime,a,Wz,gamma,r,Wj)
-ReturnFnParamNames={'gamma','r','Wj'}; %It is important that these are in same order as they appear in 'FiniteHorzStochConsSavings_ReturnFn'
 
 %% Now solve the value function iteration problem
 
 vfoptions.verbose=0;
 tic;
-[V, Policy]=ValueFnIter_Case1_FHorz(0,n_a,n_z,N_j, 0, a_grid, z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames,vfoptions);
+[V, Policy]=ValueFnIter_Case1_FHorz(0,n_a,n_z,N_j, 0, a_grid, z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [],vfoptions);
 toc
 
 % max(max(max(max(Policy))))<n_a % Double check that never try to leave top of asset grid.
@@ -89,47 +86,47 @@ simoptions.numbersims=1000;
 % model to cover ages 21-70).
 Params.age=21:5:70; % Have set age to be starting value of each five-year 'age bin'.
 
-% 1. Define the 'variable values functions' for earnings and assets.
-ValuesFnsParamNames=struct();
-ValuesFnsParamNames(1).Names={}; % Assets
-ValuesFn_Assets = @(aprime_val,a_val,z_val) a_val; 
-ValuesFnsParamNames(2).Names={'Wj'}; % Earnings: W=Wj+exp(logWz)
-ValuesFn_Earnings= @(aprime_val,a_val,z_val,Wj) Wj+exp(z_val);
-ValuesFnsParamNames(3).Names={'age'};  % Age
-ValuesFn_age = @(aprime_val,a_val,z_val,age) age;
-ValuesFn={ValuesFn_Assets, ValuesFn_Earnings, ValuesFn_age}; 
+% 1. Define the 'functions to evaluate' for earnings and assets.
+FnsToEvaluate.Assets = @(aprime,a,z) a; 
+FnsToEvaluate.Earnings= @(aprime,a,z,Wj) Wj+exp(z);
+FnsToEvaluate.age = @(aprime,a,z,age) age;
+% As with return function the first inputs must be (any decision variables), next period endogenous
+% state, this period endogenous state (any exogenous shocks). After that come any parameters.
 
 % 2. Define the initial (probability) distribution from which households in simulation are 'drawn/born'. Also called the initial conditions.
-InitialDist=zeros(n_a,n_z);
+InitialDist=zeros([n_a,n_z]);
 InitialDist(1,ceil(n_z/2))=1; % All agents born with zero assets (a_grid(1)) and the 'average' shock (middle value of z_grid).
-
 
 % 3. Simulate Panel Data
 % Same variables as we used for the life-cycle profiles.
-SimPanelValues=SimPanelValues_FHorz_Case1(InitialDist,Policy, ValuesFn,ValuesFnsParamNames,Params,0,n_a,n_z,N_j,0,a_grid,z_grid,pi_z, simoptions);
+SimPanelValues=SimPanelValues_FHorz_Case1(InitialDist,Policy, FnsToEvaluate,[],Params,0,n_a,n_z,N_j,0,a_grid,z_grid,pi_z, simoptions);
 
 % So for example one simulated life-time looks like
-SimPanelValues(:,:,1)
-% The first row is assets, second row is earnings, and third row is age.
+SimPanelValues.Assets(:,1)
+SimPanelValues.Earnings(:,1)
+SimPanelValues.age(:,1)
 % The columns index the model period j (which in this model represents age).
 
 %% Plot the mean life-cycle profiles for earnings and assets.
 
-% 1. Define the 'variable values functions' for earnings and assets.
+% We will create them from the 
+
+% 1. Define the 'functions to evalute' for earnings and assets.
 % No need to do this again, as we already have done so for the panel data.
 
 simoptions.lifecyclepercentiles=4; % Just mean and median, no percentiles. (By default is 20, so also gives min and ventiles, the later includes max by definition as the 20th ventile.)
-SimLifeCycleProfiles=SimLifeCycleProfiles_FHorz_Case1(InitialDist,Policy, ValuesFn,ValuesFnsParamNames,Params,0,n_a,n_z,N_j,0,a_grid,z_grid,pi_z, simoptions);
+LifeCycleProfiles=SimLifeCycleProfiles_FHorz_Case1(InitialDist,Policy, FnsToEvaluate,[],Params,0,n_a,n_z,N_j,0,a_grid,z_grid,pi_z,simoptions);
+% There is also 'LifeCycleProfiles_FHorz_Case1()' which uses the StationaryDist, rather than as a simulation from InitialDist
 
 % Figure: Assets
 figure(2)
-plot(Params.age,SimLifeCycleProfiles(1,:,1),Params.age,SimLifeCycleProfiles(1,:,2))
+plot(Params.age,LifeCycleProfiles.Assets.Mean,Params.age,LifeCycleProfiles.Assets.Median)
 title('Life-cycle Profile of Assets')
 legend('Mean', 'Median')
 xlabel('Age')
 % Figure: Earnings
 figure(3)
-plot(Params.age,SimLifeCycleProfiles(2,:,1),Params.age,SimLifeCycleProfiles(2,:,2))
+plot(Params.age,LifeCycleProfiles.Earnings.Mean,Params.age,LifeCycleProfiles.Earnings.Median)
 title('Life-cycle Profile of Earnings')
 legend('Mean', 'Median')
 xlabel('Age')
