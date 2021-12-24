@@ -14,21 +14,7 @@ n_a=1501;
 % n_z=18; % income (these 18 points are hardcoded into z_grid and pi_z, done this way due to how Huggett sets them up)
 N_j=Params.J; % Number of periods in finite horizon
 
-% A few lines needed for running on the Server
-addpath(genpath('./MatlabToolkits/'))
-try % Server has 16 cores, but is shared with other users, so use max of 8.
-    parpool(8)
-    gpuDevice(1)
-catch % Desktop has less than 8, so will give error, on desktop it is fine to use all available cores.
-    parpool
-end
-PoolDetails=gcp;
-NCores=PoolDetails.NumWorkers;
-simoptions.ncores=NCores;
-
 % Hugget solves more than one economy (parametrization). This example just does his baseline.
-
-simoptions.parallel=3
 
 %% Declare the model parameters
 % Note that r, w, and G will be determined in General equilbrium, so these are really just initial guesses.
@@ -148,15 +134,17 @@ a_grid=sort(a_grid); % Double-check: length(unique(a_grid))==n_a
 DiscountFactorParamNames={'beta','sj'};
  
 ReturnFn=@(aprime,a,z,sigma,r,ybarj,theta,b,bvec,T,delta,alpha,A,bc_equalsminusw) Huggett1996_ReturnFn(aprime,a,z,sigma,r,ybarj,theta,b,bvec,T,delta,alpha,A,bc_equalsminusw)
-ReturnFnParamNames={'sigma','r','ybarj','theta','b','bvec','T','delta','alpha','A','bc_equalsminusw'}; %It is important that these are in same order as they appear in 'Huggett1996_ReturnFn'
+% For the return function the first inputs must be (any decision variables), next period endogenous
+% state, this period endogenous state (any exogenous shocks). After that come any parameters.
 
 %% Now solve the value function iteration problem, just to check that things are working before we go to General Equilbrium
 
 disp('Test ValueFnIter')
-vfoptions.verbose=0;
-vfoptions.policy_forceintegertype=2; % Policy was not being treated as integers (one of the elements was 10^(-15) different from an integer)
+% vfoptions.verbose=0;
+% vfoptions.policy_forceintegertype=2; % Policy was not being treated as integers (one of the elements was 10^(-15) different from an integer)
+vfoptions=struct(); % Just use the defaults
 tic;
-[V, Policy]=ValueFnIter_Case1_FHorz(0,n_a,n_z,N_j, 0, a_grid, z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames,vfoptions);
+[V, Policy]=ValueFnIter_Case1_FHorz(0,n_a,n_z,N_j, 0, a_grid, z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [],vfoptions);
 toc
 
 % max(max(max(max(Policy))))<n_a % Double check that never try to leave top of asset grid.
@@ -186,48 +174,36 @@ for jj=2:length(Params.mewj)
     Params.mewj(jj)=Params.sj(jj-1)*Params.mewj(jj-1)/(1+Params.n);
 end
 Params.mewj=Params.mewj./sum(Params.mewj);
-
-simoptions.nsims=4*10^5;
-simoptions.iterate=1;
 AgeWeightsParamNames={'mewj'}; % Many finite horizon models apply different weights to different 'ages'; eg., due to survival rates or population growth rates.
 
 Params.fractionretired=sum(Params.mewj.*Params.bvec); % Note: bvec is really just an indicator of retirement
 %% Test
 disp('Test StationaryDist')
+simoptions.parallel=4; % Sparse matrix on gpu
+% simoptions=struct(); % Just use the defaults
 tic;
 StationaryDist=StationaryDist_FHorz_Case1(jequaloneDist,AgeWeightsParamNames,Policy,0,n_a,n_z,N_j,pi_z,Params,simoptions);
 toc
 
 %% Set up the General Equilibrium conditions (on assets/interest rate, assuming a representative firm with Cobb-Douglas production function)
 
-% Stationary Distribution Aggregates (important that ordering of Names and Functions is the same)
-FnsToEvaluateParamNames=struct();
-FnsToEvaluateParamNames(1).Names={};
-FnsToEvaluateFn_1 = @(aprime_val,a_val,z_val) a_val; % Aggregate assets (which is this periods state)
-FnsToEvaluateParamNames(2).Names={'ybarj'};
-FnsToEvaluateFn_2 = @(aprime_val,a_val,z_val,ybarj) exp(z_val+ybarj); % Aggregate labour supply (in efficiency units)
-FnsToEvaluateParamNames(3).Names={'sj','r','tau'};
-FnsToEvaluateFn_3 = @(aprime_val,a_val,z_val,sj,r,tau) (1-sj)*aprime_val*(1+r*(1-tau)); % Total accidental bequests
-FnsToEvaluate={FnsToEvaluateFn_1,FnsToEvaluateFn_2,FnsToEvaluateFn_3};
+% Functions to evaluate
+FnsToEvaluate.K = @(aprime,a,z) a; % Aggregate assets (which is this periods state)
+FnsToEvaluate.L = @(aprime,a,z,ybarj) exp(z+ybarj); % Aggregate labour supply (in efficiency units)
+FnsToEvaluate.Beq = @(aprime,a,z,sj,r,tau) (1-sj)*aprime*(1+r*(1-tau)); % Total accidental bequests
 % Note that the aggregate labour supply is actually entirely exogenous and so I could just precompute it, but am feeling lazy.
 
 % General Equilibrium Equations
-% Recall that GEPriceParamNames={'r','b','T'}; In following lines p is the vector of these and so, e.g., p(2) is T.
-GeneralEqmEqnParamNames=struct();
-GeneralEqmEqnParamNames(1).Names={'A','alpha','delta'};
-GeneralEqmEqn_1 = @(AggVars,p,A,alpha,delta) p(1)-(A*alpha*(AggVars(1)^(alpha-1))*(AggVars(2)^(1-alpha))-delta); % Rate of return on assets is related to Marginal Product of Capital
-GeneralEqmEqnParamNames(2).Names={'theta','fractionretired','A','alpha'};
-GeneralEqmEqn_2 = @(AggVars,p,theta,fractionretired,alpha,A) p(2)*fractionretired-theta*(A*(1-alpha)*(AggVars(1)^(alpha))*(AggVars(2)^(-alpha)))*AggVars(2); % Retirement benefits equal Payroll tax revenue: b*fractionretired-theta*w*L
-GeneralEqmEqnParamNames(3).Names={};
-GeneralEqmEqn_3 = @(AggVars,p) p(3)-AggVars(3); % Lump-sum transfers equal Accidental bequests 
-GeneralEqmEqns={GeneralEqmEqn_1,GeneralEqmEqn_2,GeneralEqmEqn_3};
+% Recall that GEPriceParamNames={'r','b','T'};
+GeneralEqmEqns.capitalmarket = @(r,L,K,A,alpha,delta) r-(A*alpha*(K^(alpha-1))*(L^(1-alpha))-delta); % Rate of return on assets is related to Marginal Product of Capital
+GeneralEqmEqns.SSbalance = @(b,K,L,theta,fractionretired,alpha,A) b*fractionretired-theta*(A*(1-alpha)*(K^(alpha))*(L^(-alpha)))*L; % Retirement benefits equal Payroll tax revenue: b*fractionretired-theta*w*L
+GeneralEqmEqns.Bequests = @(T,Beq) T-Beq; % Lump-sum transfers equal Accidental bequests 
 
 %% Test
 disp('Test AggVars')
-AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, 0, n_a, n_z,N_j, 0, a_grid, z_grid, 2); % The 2 is for Parallel (use GPU)
-disp('Test AggVars: Done')
-GeneralEqmConditionsVec=real(GeneralEqmConditions_Case1(AggVars,[Params.r,Params.b,Params.T], GeneralEqmEqns, Params,GeneralEqmEqnParamNames));
-
+tic;
+AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], 0, n_a, n_z,N_j, 0, a_grid, z_grid, 2);
+toc
 
 %% Solve for the General Equilibrium
 % Use the toolkit to find the equilibrium price index. There are two ways
@@ -238,11 +214,11 @@ GeneralEqmConditionsVec=real(GeneralEqmConditions_Case1(AggVars,[Params.r,Params
 % Without p_grid, just searching. Use n_p=0. (Setting the actual algorithm
 % used to 'search' can be done with heteroagentoptions.fminalgo)
 heteroagentoptions.verbose=1;
-[p_eqm,p_eqm_index, GeneralEqmEqnsValues]=HeteroAgentStationaryEqm_Case1_FHorz(jequaloneDist,AgeWeightsParamNames,0, n_a, n_z, N_j, 0, pi_z, 0, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, GEPriceParamNames, heteroagentoptions, simoptions, vfoptions);
+[p_eqm,p_eqm_index, GeneralEqmEqnsValues]=HeteroAgentStationaryEqm_Case1_FHorz(jequaloneDist,AgeWeightsParamNames,0, n_a, n_z, N_j, 0, pi_z, 0, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions,simoptions,vfoptions);
 Params.r=p_eqm.r;
 Params.b=p_eqm.b;
 Params.T=p_eqm.T;
-save ./SavedOutput/Huggett1996.mat Params
+% save ./SavedOutput/Huggett1996.mat Params
 
 % Using p_grid. This can be helpful if you want to, e.g., look for
 % possibility of multiple equilibria.
@@ -256,14 +232,14 @@ save ./SavedOutput/Huggett1996.mat Params
 % n_p=[length(r_grid),length(b_grid),length(T_grid)];
 % heteroagentoptions.pgrid=p_grid;
 % heteroagentoptions.verbose=1;
-% [p_eqm,p_eqm_index, GeneralEqmEqnsValues]=HeteroAgentStationaryEqm_Case1_FHorz(jequaloneDist,AgeWeights,0, n_a, n_z, N_j, n_p, pi_z, 0, a_grid, z_grid, ReturnFn, SSvaluesFn, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, SSvalueParamNames, GeneralEqmEqnParamNames, GEPriceParamNames, heteroagentoptions, simoptions, vfoptions);
+% [p_eqm,p_eqm_index, GeneralEqmEqnsValues]=HeteroAgentStationaryEqm_Case1_FHorz(jequaloneDist,AgeWeights,0, n_a, n_z, N_j, n_p, pi_z, 0, a_grid, z_grid, ReturnFn, SSvaluesFn, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames, heteroagentoptions, simoptions, vfoptions);
 % Params.r=p_eqm(1);
 % Params.b=p_eqm(2);
 % Params.T=p_eqm(3);
 % save ./SavedOutput/Huggett1996grid.mat Params
 
 %% Compute a few things about the equilibrium
-[V, Policy]=ValueFnIter_Case1_FHorz(0,n_a,n_z,N_j, 0, a_grid, z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames,vfoptions);
+[V, Policy]=ValueFnIter_Case1_FHorz(0,n_a,n_z,N_j, 0, a_grid, z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [],vfoptions);
 StationaryDist=StationaryDist_FHorz_Case1(jequaloneDist,AgeWeightsParamNames,Policy,0,n_a,n_z,N_j,pi_z,Params,simoptions);
 
 % Start with some basics (these were previously being done inside return function):
@@ -285,36 +261,27 @@ for jj=1:Params.J
 end
 AggregateWealthTransers=sum(Params.mewj.*AggregateWealthTransers);
 % Total wealth
-FnsToEvaluateParamNames=struct();
-FnsToEvaluateParamNames(1).Names={}; 
-FnsToEvaluate_TotalWealth = @(aprime_val,a_val,z_val) a_val;
-FnsToEvaluate={FnsToEvaluate_TotalWealth};
-TotalWealth=SSvalues_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, 0, n_a, n_z,N_j, 0, a_grid, z_grid, 2); % The 2 is for Parallel (use GPU)
+FnsToEvaluate.TotalWealth = @(aprime,a,z) a;
+AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], 0, n_a, n_z,N_j, 0, a_grid, z_grid, 2);
 % Transfer Wealth Ratio
-TransferWealthRatio=AggregateWealthTransers/TotalWealth;
+TransferWealthRatio=AggregateWealthTransers/AggVars.TotalWealth.Mean;
 
 
 % Calculate fraction of population with zero or negative wealth
-FnsToEvaluateParamNames=struct();
-FnsToEvaluateParamNames(1).Names={}; % ZeroOrNegAssets
-FnsToEvaluate_ZeroOrNegAssets = @(aprime_val,a_val,z_val) (a_val<=0); % Indicator for ZeroOrNegAssets
-FnsToEvaluate={FnsToEvaluate_ZeroOrNegAssets};
-FractionWithZeroOrNegAssets=100*SSvalues_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, 0, n_a, n_z,N_j, 0, a_grid, z_grid, 2); % The 2 is for Parallel (use GPU)
+FnsToEvaluate.ZeroOrNegAssets = @(aprime,a,z) (a<=0); % Indicator for ZeroOrNegAssets
+AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], 0, n_a, n_z,N_j, 0, a_grid, z_grid, 2);
+FractionWithZeroOrNegAssets=100*AggVars.ZeroOrNegAssets.Mean;
 
 % Calculate wealth lorenz curve (and thus all percentile shares) and also
 % the that for earnings (in text at bottom of pg 480, top of pg 481, there
 % are a bunch of descriptions of model earnings, conditional on working age)
-FnsToEvaluateParamNames=struct();
-FnsToEvaluateParamNames(1).Names={};
-FnsToEvaluate_1 = @(aprime_val,a_val,z_val) a_val; % Aggregate assets (which is this periods state)
-FnsToEvaluate={FnsToEvaluate_1};
-StationaryDist_LorenzCurves=EvalFnOnAgentDist_LorenzCurve_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, 0, n_a, n_z,N_j, 0, a_grid, z_grid,2); % The 2 is for Parallel (use GPU)
-TopWealthShares=100*(1-StationaryDist_LorenzCurves([80,95,99],1)); % Need the 20,5, and 1 top shares for Tables of Huggett (1996)
+FnsToEvaluate.Wealth = @(aprime,a,z) a; % Notice that wealth is just the same as aggregate assets. I am going to evaluate it again anyway but this is total overkill.
+LorenzCurves=EvalFnOnAgentDist_LorenzCurve_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], 0, n_a, n_z,N_j, 0, a_grid, z_grid,2);
+TopWealthShares=100*(1-LorenzCurves.Wealth([80,95,99],1)); % Need the 20,5, and 1 top shares for Tables of Huggett (1996)
 % Calculate the wealth gini
-WealthGini=Gini_from_LorenzCurve(StationaryDist_LorenzCurves(:,1));
+WealthGini=Gini_from_LorenzCurve(LorenzCurves.Wealth);
 
-AgeConditionalStats=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvaluate,FnsToEvaluateParamNames,Params,0,n_a,n_z,N_j,0,a_grid,z_grid);
-
+AgeConditionalStats=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvaluate,[],Params,0,n_a,n_z,N_j,0,a_grid,z_grid);
 
 %% Draw figures from Huggett (1996)
 
@@ -326,14 +293,14 @@ xlabel('Age')
 ylabel('Earnings')
 % Fig 2
 figure(2);
-plot(19+(1:1:71),AgeConditionalStats.Mean(1:end-8),19+(1:1:71),AgeConditionalStats.QuantileCutoffs(2,1:end-8),19+(1:1:71),AgeConditionalStats.QuantileCutoffs(5,1:end-8),19+(1:1:71),AgeConditionalStats.QuantileCutoffs(10,1:end-8))
+plot(19+(1:1:71),AgeConditionalStats.Wealth.Mean(1:end-8),19+(1:1:71),AgeConditionalStats.Wealth.QuantileCutoffs(2,1:end-8),19+(1:1:71),AgeConditionalStats.Wealth.QuantileCutoffs(5,1:end-8),19+(1:1:71),AgeConditionalStats.Wealth.QuantileCutoffs(10,1:end-8))
 legend('Mean','10th','25th','Median')
 title({'Wealth Profiles: Uncertain Lifetimes'})
 xlabel('Age')
 ylabel('Wealth')
 % Fig 4(ish)
 figure(3);
-plot(19+(6:1:71),AgeConditionalStats.Gini(6:(end-8)))
+plot(19+(6:1:71),AgeConditionalStats.Wealth.Gini(6:(end-8)))
 title('Wealth Gini at different ages')
 xlabel('Age')
 ylabel('Wealth Gini')
@@ -353,30 +320,24 @@ fprintf('The percentage share of total wealth held by top 20 percent of wealth-h
 
 fprintf('The percentage of population with zero or negative wealth is: %8.2f \n', FractionWithZeroOrNegAssets);
 
-%%
-save ./SavedOutput/Huggett1996_2.mat jequaloneDist Policy Params n_a n_z N_j a_grid z_grid pi_z simoptions StationaryDist
-
 %% A double-check, calculate some statistics about earnings (in text at bottom of pg 480, top of pg 481, there
 % are a bunch of descriptions of model earnings, conditional on working age). Since earnings inequality is completely exogenous (earnings depends
 % endogenously on w, but this will disappear from all the relative inequality measures).
 
-FnsToEvaluateParamNames=struct();
-FnsToEvaluateParamNames(1).Names={'w','ybarj'};
-FnsToEvaluate_1 = @(aprime_val,a_val,z_val,w,ybarj) w*exp(z_val+ybarj); % Earnings
-FnsToEvaluate={FnsToEvaluate_1};
+FnsToEvaluate.Earnings = @(aprime,a,z,w,ybarj) w*exp(z+ybarj); % Earnings
 
 % options.agegroupings=1:1:N_j; % for each age, this is anyway the default
-AgeConditionalStats=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvaluate,FnsToEvaluateParamNames,Params,0,n_a,n_z,N_j,0,a_grid,z_grid);
-options.agegroupings=[1,Params.JR]; % Working age, Retired (not actually interested in the numbers for retired)
-AllEmployedStats=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvaluate,FnsToEvaluateParamNames,Params,0,n_a,n_z,N_j,0,a_grid,z_grid,options);
+AgeConditionalStats=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvaluate,[],Params,0,n_a,n_z,N_j,0,a_grid,z_grid);
+simoptions.agegroupings=[1,Params.JR]; % Working age, Retired (not actually interested in the numbers for retired)
+AllEmployedStats=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvaluate,[],Params,0,n_a,n_z,N_j,0,a_grid,z_grid,simoptions);
 
-fprintf('The Earnings Gini for 20 year olds is: %8.2f \n', AgeConditionalStats.Gini(1));
-fprintf('The Earnings Gini for 65 year olds is: %8.2f \n', AgeConditionalStats.Gini(Params.JR));
-fprintf('The Earnings Gini for Working Age Population is: %8.2f \n', AllEmployedStats.Gini(1));
-fprintf('The percentage share of earnings going to top 1 percent of earners is: %8.2f \n', 100*(1-AllEmployedStats.LorenzCurve(99,1)));
-fprintf('The percentage share of earnings going to top 5 percent of earners is: %8.2f \n', 100*(1-AllEmployedStats.LorenzCurve(95,1)));
-fprintf('The percentage share of earnings going to top 10 percent of earners is: %8.2f \n', 100*(1-AllEmployedStats.LorenzCurve(90,1)));
-fprintf('The percentage share of earnings going to top 20 percent of earners is: %8.2f \n', 100*(1-AllEmployedStats.LorenzCurve(80,1)));
+fprintf('The Earnings Gini for 20 year olds is: %8.2f \n', AgeConditionalStats.Earnings.Gini(1));
+fprintf('The Earnings Gini for 65 year olds is: %8.2f \n', AgeConditionalStats.Earnings.Gini(Params.JR));
+fprintf('The Earnings Gini for Working Age Population is: %8.2f \n', AllEmployedStats.Earnings.Gini(1));
+fprintf('The percentage share of earnings going to top 1 percent of earners is: %8.2f \n', 100*(1-AllEmployedStats.Earnings.LorenzCurve(99,1)));
+fprintf('The percentage share of earnings going to top 5 percent of earners is: %8.2f \n', 100*(1-AllEmployedStats.Earnings.LorenzCurve(95,1)));
+fprintf('The percentage share of earnings going to top 10 percent of earners is: %8.2f \n', 100*(1-AllEmployedStats.Earnings.LorenzCurve(90,1)));
+fprintf('The percentage share of earnings going to top 20 percent of earners is: %8.2f \n', 100*(1-AllEmployedStats.Earnings.LorenzCurve(80,1)));
 
 % %% Dean Corbae's Homework 5 inputs:
 % % According to Dean Corbae's HW5 files he got the original numbers from
