@@ -61,10 +61,8 @@ if strcmp(vfoptions.exoticpreferences,'EpsteinZin')
     % Note that gamma has been removed from return function when using Epstein-Zin preferences.
     % To do this now use ImrohorogluImrohorogluJoines1995_EpsteinZin_ReturnFn as return fn.
     ReturnFn=@(aprime,a,z,r,tau_u, tau_s,h,zeta, epsilon_j,I_j,alpha,delta, A,SSdivw, Tr_beq, MedicalShock,workinglifeincome,g,agej,LumpSum) ImrohorogluImrohorogluJoines1995_EpsteinZin_ReturnFn(aprime,a,z,r,tau_u, tau_s,h,zeta, epsilon_j,I_j,alpha,delta, A,SSdivw, Tr_beq, MedicalShock,workinglifeincome,g,agej,LumpSum)
-    ReturnFnParamNames={'r','tau_u', 'tau_s', 'h','zeta', 'epsilon_j','I_j','alpha','delta', 'A','SSdivw', 'Tr_beq', 'MedicalShock','workinglifeincome','g','agej','LumpSum'}; %It is important that these are in same order as they appear in 'ImrohorogluImrohogluJoines1995_ReturnFn'
 else
     ReturnFn=@(aprime,a,z,r,tau_u, tau_s,gamma, h,zeta, epsilon_j,I_j,alpha,delta, A,SSdivw, Tr_beq, MedicalShock,workinglifeincome,g,agej,LumpSum) ImrohorogluImrohorogluJoines1995_ReturnFn(aprime,a,z,r,tau_u, tau_s,gamma, h,zeta, epsilon_j,I_j,alpha,delta, A,SSdivw, Tr_beq, MedicalShock,workinglifeincome,g,agej,LumpSum)
-    ReturnFnParamNames={'r','tau_u', 'tau_s','gamma', 'h','zeta', 'epsilon_j','I_j','alpha','delta', 'A','SSdivw', 'Tr_beq', 'MedicalShock','workinglifeincome','g','agej','LumpSum'}; %It is important that these are in same order as they appear in 'ImrohorogluImrohogluJoines1995_ReturnFn'
     % Note: MedicalShock,workinglifeincome,g,agej are only required for the extensions of the model. None of these would be needed for just the baseline model.
 end
 % When using Epstein-Zin preferences the risk aversion is done as part of
@@ -73,6 +71,8 @@ end
 % aversion is done as part of the return function.
 
 % That is all. Every other line of code is unchanged!! Epstein-Zin really is that easy ;)
+
+% Note: I changed the value of beta so that the general eqm interest rate is reasonable
 
 %%
 % No decision variable: IIJ1995 has inelastic labor supply
@@ -84,14 +84,14 @@ Params.J=65; % Number of period in life-cycle (represents ages 21 to 85)
 
 % Grid sizes to use
 % % labour supply is exogenous (IIJ1995 refers to this as 'perfectly inelastic labor supply')
-n_k=1251; % Assets
+n_k=1501; % Assets
 n_z=2; % employed or unemployed (IIJ1995 refers to this shock as Markow, but in calibration actually imposes that it is iid).
 N_j=Params.J; % Number of periods in finite horizon
 
 %% Set model parameters
 
 % Params.gamma=2; % Now done above as part of Epstein-Zin preferences
-Params.beta=1.011; % Note that once this is combined with the conditional probability of survival it gives numbers that are typically less than 1.
+Params.beta=0.98; % Note that once this is combined with the conditional probability of survival it gives numbers that are typically less than 1.
 Params.h=0.45; % IIJ1995, pg 90
 
 %Technology parameters
@@ -165,7 +165,7 @@ Params.SSdivw=Params.b*sum(Params.h*Params.epsilon_j(1:(Params.Jr-1)))/(Params.J
 Params.LumpSum=0;  % They are by definition zero whenever not calculating the welfare benefits of reforms
 
 %% Grids and exogenous shocks
-k_grid=18*(linspace(0,1,n_k).^3)'; % Grid on capital
+k_grid=20*(linspace(0,1,n_k).^3)'; % Grid on capital
 
 z_grid=[0; 1]; % Indicates 'employed'
 pi_z=[0.06, 0.94; 0.06, 0.94]; % Note that IIJ1995 reports this on pg 92 with the 'reversed' definition of which state is which.
@@ -209,24 +209,16 @@ AgeWeightsParamNames={'mewj'}; % Many finite horizon models apply different weig
 %% General equilibrium, and initial parameter values for the general eqm parameters
 
 GEPriceParamNames={'r','tau_u','tau_s','Tr_beq'};
-Params.r=0.06; % interest rate on assets
+Params.r=0.062; % interest rate on assets
 Params.tau_u=0.019; % set to balance unemployment benefits expenditure
-Params.tau_s=0.122; % set to balance social security benefits expenditure
-Params.Tr_beq=0.2; % Accidental bequests (IIJ1995 calls this T)
+Params.tau_s=0.08; % set to balance social security benefits expenditure
+Params.Tr_beq=0.07; % Accidental bequests (IIJ1995 calls this T)
 
-% Because of use of Epstein-Zin preferences the discount factors and return
-% function have already been done.
-% %% Now, create the return function 
-% DiscountFactorParamNames={'beta','sj','gdiscount'}; % gdiscount is 1 in the baseline, it is needed for the extension to include deterministic productivity growth
-%  
-% ReturnFn=@(aprime,a,z,r,tau_u, tau_s,gamma, h,zeta, epsilon_j,I_j,alpha,delta, A,SSdivw, Tr_beq, MedicalShock,workinglifeincome,g,agej,LumpSum) ImrohorogluImrohorogluJoines1995_ReturnFn(aprime,a,z,r,tau_u, tau_s,gamma, h,zeta, epsilon_j,I_j,alpha,delta, A,SSdivw, Tr_beq, MedicalShock,workinglifeincome,g,agej,LumpSum)
-% ReturnFnParamNames={'r','tau_u', 'tau_s','gamma', 'h','zeta', 'epsilon_j','I_j','alpha','delta', 'A','SSdivw', 'Tr_beq', 'MedicalShock','workinglifeincome','g','agej','LumpSum'}; %It is important that these are in same order as they appear in 'ImrohorogluImrohogluJoines1995_ReturnFn'
-% % Note: MedicalShock,workinglifeincome,g,agej are only required for the extensions of the model. None 
-% % of these would be needed for just the baseline model.
+% Because of use of Epstein-Zin preferences the discount factors and return function have already been done.
 
 %% Now solve the value function iteration problem, just to check that things are working before we go to General Equilbrium
 disp('Test ValueFnIter')
-[V, Policy]=ValueFnIter_Case1_FHorz(n_d,n_a,n_z,N_j, d_grid, a_grid, z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames,vfoptions);
+[V, Policy]=ValueFnIter_Case1_FHorz(n_d,n_a,n_z,N_j, d_grid, a_grid, z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [],vfoptions);
 
 % max(max(max(max(Policy))))<n_a % Double check that never try to leave top of asset grid.
 % sum(sum(sum(sum(Policy==n_a))))
@@ -242,77 +234,57 @@ StationaryDist=StationaryDist_FHorz_Case1(jequaloneDist,AgeWeightsParamNames,Pol
 
 %% Set up the General Equilibrium conditions (on assets/interest rate, assuming a representative firm with Cobb-Douglas production function)
 
-% Steady State Aggregates (important that ordering of Names and Functions is the same)
-FnsToEvaluateParamNames=struct();
-FnsToEvaluateParamNames(1).Names={};
-FnsToEvaluate_1 = @(aprime_val,a_val,z_val) a_val; % Aggregate assets K
-FnsToEvaluateParamNames(2).Names={'I_j','h','epsilon_j'};
-FnsToEvaluate_2 = @(aprime_val,a_val,z_val,I_j,h,epsilon_j) I_j*h*epsilon_j*z_val; % Aggregate effective labour supply (in efficiency units), I1998 calls this N
-FnsToEvaluateParamNames(3).Names={'sj','n'};
-FnsToEvaluate_3 = @(aprime_val,a_val,z_val,sj,n) (1-sj)*aprime_val/(1+n); % Tr, accidental bequest transfers % The divided by (1+n) is due to population growth and because this is Tr_{t+1}
-FnsToEvaluateParamNames(4).Names={'r','tau_u', 'tau_s','h','zeta','epsilon_j','I_j','alpha','delta', 'A','SSdivw', 'Tr_beq','workinglifeincome','g','agej','MedicalShock','LumpSum'}; 
-FnsToEvaluate_4 = @(aprime_val,a_val,z_val,r,tau_u, tau_s,h,zeta,epsilon_j,I_j,alpha,delta, A,SSdivw, Tr_beq,workinglifeincome,g,agej,MedicalShock,LumpSum) ImrohorogluImrohorogluJoines1995_ConsumptionFn(aprime_val,a_val,z_val, r,tau_u, tau_s,h,zeta,epsilon_j,I_j,alpha,delta, A,SSdivw, Tr_beq,workinglifeincome,g,agej,MedicalShock,LumpSum); % Consumption
-FnsToEvaluateParamNames(5).Names={'r','A','alpha','delta','h','I_j','epsilon_j'};
-FnsToEvaluate_5 = @(aprime_val,a_val,z_val,r,A,alpha,delta,h,I_j,epsilon_j) ((1-alpha)*(A^(1/(1-alpha)))*((r+delta)/alpha)^(alpha/(alpha-1)))*I_j*h*epsilon_j*z_val; % Labour income (this is also the tax base for various taxes)
-FnsToEvaluateParamNames(6).Names={'r','A','alpha','delta','h','I_j'};
-FnsToEvaluate_6 = @(aprime_val,a_val,z_val,r,A,alpha,delta,h,I_j) ((1-alpha)*(A^(1/(1-alpha)))*((r+delta)/alpha)^(alpha/(alpha-1)))*I_j*h*(1-z_val); % Potential Labour income (in worked 100 percent of time) of the unemployed (the unemployment benefits are set as a fraction, zeta, of this)
-FnsToEvaluateParamNames(7).Names={'SSdivw','r','A','alpha','delta','I_j'}; % MODIFY TO ALLOW FOR g
-FnsToEvaluate_7 = @(aprime_val,a_val,z_val,SSdivw,r,A,alpha,delta,I_j) ((1-alpha)*(A^(1/(1-alpha)))*((r+delta)/alpha)^(alpha/(alpha-1)))*SSdivw*(1-I_j); % Total social security benefits: w*SSdivw*(1-I_j)
-FnsToEvaluate={FnsToEvaluate_1,FnsToEvaluate_2,FnsToEvaluate_3,FnsToEvaluate_4,FnsToEvaluate_5,FnsToEvaluate_6,FnsToEvaluate_7};
+% Function to Evaluate (to get aggregates, or life-cycle profiles, etc.)
+FnsToEvaluate.K = @(aprime,a,z) a; % Aggregate assets K
+FnsToEvaluate.N = @(aprime,a,z,I_j,h,epsilon_j) I_j*h*epsilon_j*z; % Aggregate effective labour supply (in efficiency units), I1998 calls this N
+FnsToEvaluate.Tr = @(aprime,a,z,sj,n) (1-sj)*aprime/(1+n); % Tr, accidental bequest transfers % The divided by (1+n) is due to population growth and because this is Tr_{t+1}
+FnsToEvaluate.C = @(aprime,a,z,r,tau_u, tau_s,h,zeta,epsilon_j,I_j,alpha,delta, A,SSdivw, Tr_beq,workinglifeincome,g,agej,MedicalShock,LumpSum) ImrohorogluImrohorogluJoines1995_ConsumptionFn(aprime,a,z, r,tau_u, tau_s,h,zeta,epsilon_j,I_j,alpha,delta, A,SSdivw, Tr_beq,workinglifeincome,g,agej,MedicalShock,LumpSum); % Consumption
+FnsToEvaluate.LaborIncome = @(aprime,a,z,r,A,alpha,delta,h,I_j,epsilon_j) ((1-alpha)*(A^(1/(1-alpha)))*((r+delta)/alpha)^(alpha/(alpha-1)))*I_j*h*epsilon_j*z; % Labour income (this is also the tax base for various taxes)
+FnsToEvaluate.PotentialLaborIncome = @(aprime,a,z,r,A,alpha,delta,h,I_j) ((1-alpha)*(A^(1/(1-alpha)))*((r+delta)/alpha)^(alpha/(alpha-1)))*I_j*h*(1-z); % Potential Labour income (in worked 100 percent of time) of the unemployed (the unemployment benefits are set as a fraction, zeta, of this)
+FnsToEvaluate.SSbenefits = @(aprime,a,z,SSdivw,r,A,alpha,delta,I_j) ((1-alpha)*(A^(1/(1-alpha)))*((r+delta)/alpha)^(alpha/(alpha-1)))*SSdivw*(1-I_j); % Total social security benefits: w*SSdivw*(1-I_j)
 
 % General Equilibrium Equations
-% Recall that GEPriceParamNames={'r','tau_u','tau_s','Tr_beq'}; In following lines p is the vector of these and so, e.g., p(2) is G.
-GeneralEqmEqnParamNames=struct();
-GeneralEqmEqnParamNames(1).Names={'A','alpha','delta'};
-GeneralEqmEqn_1 = @(AggVars,GEprices,A,alpha,delta) GEprices(1)-(A*(alpha)*(AggVars(1)^(alpha-1))*(AggVars(2)^(1-alpha))-delta); % Rate of return on assets is related to Marginal Product of Capital
-GeneralEqmEqnParamNames(2).Names={'zeta'};
-GeneralEqmEqn_2 = @(AggVars,GEprices,zeta) GEprices(2)*AggVars(5)-zeta*AggVars(6); % Equation (16)
-GeneralEqmEqnParamNames(3).Names={};
-GeneralEqmEqn_3 = @(AggVars,GEprices) GEprices(3)*AggVars(5)-AggVars(7); % Equation (15)
-GeneralEqmEqnParamNames(4).Names={};
-GeneralEqmEqn_4 = @(AggVars,GEprices) GEprices(4)-AggVars(3); % Equation (17): Accidental bequests (adjusted for population growth) are equal to transfers received (this is essentially eqn 14)
-GeneralEqmEqns={GeneralEqmEqn_1, GeneralEqmEqn_2, GeneralEqmEqn_3, GeneralEqmEqn_4};
+% Recall that GEPriceParamNames={'r','tau_u','tau_s','Tr_beq'};
+GeneralEqmEqns.capitalmarket = @(N,K,r,A,alpha,delta) r-(A*(alpha)*(K^(alpha-1))*(N^(1-alpha))-delta); % Rate of return on assets is related to Marginal Product of Capital
+GeneralEqmEqns.UnempGenerosity = @(tau_u,LaborIncome,zeta,PotentialLaborIncome) tau_u*LaborIncome-zeta*PotentialLaborIncome; % Equation (16)
+GeneralEqmEqns.SSbalance = @(tau_s,LaborIncome,SSbenefits) tau_s*LaborIncome-SSbenefits; % Equation (15)
+GeneralEqmEqns.Bequests = @(Tr_beq,Tr) Tr_beq-Tr; % Equation (17): Accidental bequests (adjusted for population growth) are equal to transfers received (this is essentially eqn 14)
 % Note that the second of these general eqm conditions, about tau_u and zeta is in fact 
 % unnecessary with exogenous labor (as w would cancel from both terms and the rest is exogenous).
 
 %% Test
 disp('Test AggVars')
-AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,[],simoptions);
+AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,[],simoptions);
 
 %% Calculate the general equilibrium
 heteroagentoptions.verbose=1; % Give info on how the General eqm conditions are going
-[p_eqm,p_eqm_index, GeneralEqmEqnsValues]=HeteroAgentStationaryEqm_Case1_FHorz(jequaloneDist,AgeWeightsParamNames,n_d, n_a, n_z, N_j, 0, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, GEPriceParamNames,heteroagentoptions,simoptions,vfoptions);
+[p_eqm,p_eqm_index, GeneralEqmEqnsValues]=HeteroAgentStationaryEqm_Case1_FHorz(jequaloneDist,AgeWeightsParamNames,n_d, n_a, n_z, N_j, 0, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions,simoptions,vfoptions);
 Params.r=p_eqm.r;
 Params.tau_u=p_eqm.tau_u;
 Params.tau_s=p_eqm.tau_s;
 Params.Tr_beq=p_eqm.Tr_beq;
 
 %% Calculate some model statistics of the kind reported in IIJ1995
-[V, Policy]=ValueFnIter_Case1_FHorz(n_d,n_a,n_z,N_j, d_grid, a_grid, z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames,vfoptions);
+[V, Policy]=ValueFnIter_Case1_FHorz(n_d,n_a,n_z,N_j, d_grid, a_grid, z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [],vfoptions);
 StationaryDist=StationaryDist_FHorz_Case1(jequaloneDist,AgeWeightsParamNames,Policy,n_d,n_a,n_z,N_j,pi_z,Params,simoptions);
 
-AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,[],simoptions);
+AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,[],simoptions);
 % Aggregate labor is actually exogenous and equal to N=0.3491, but I
 % anyway compute it just to show how (can also be used as a double check)
 % N=E[z*h*epsilon_j*I_j] (the mewj and 0.94 of IIJ1995 on pg 90 are implicit in the expectation)
-[AggVars(2),0.3491]
+[AggVars.N.Mean,0.3491]
 
-FnsToEvaluateParamNames2=struct();
-FnsToEvaluateParamNames2(1).Names={};
-FnsToEvaluate_K = @(aprime_val,a_val,z_val) a_val; % Aggregate assets K
-FnsToEvaluateParamNames2(2).Names={'I_j','h','epsilon_j'};
-FnsToEvaluate_N = @(aprime_val,a_val,z_val,I_j,h,epsilon_j) I_j*h*epsilon_j*z_val; % Aggregate effective labour supply (in efficiency units), I1998 calls this N
-FnsToEvaluateParamNames2(3).Names={'r','tau_u', 'tau_s','h','zeta','epsilon_j','I_j','alpha','delta', 'A','SSdivw', 'Tr_beq','workinglifeincome','g','agej','MedicalShock','LumpSum'}; 
-FnsToEvaluate_C = @(aprime_val,a_val,z_val,r,tau_u, tau_s,h,zeta,epsilon_j,I_j,alpha,delta, A,SSdivw, Tr_beq,workinglifeincome,g,agej,MedicalShock,LumpSum) ImrohorogluImrohorogluJoines1995_ConsumptionFn(aprime_val,a_val,z_val, r,tau_u, tau_s,h,zeta,epsilon_j,I_j,alpha,delta, A,SSdivw, Tr_beq,workinglifeincome,g,agej,MedicalShock,LumpSum); % Consumption
-FnsToEvaluateParamNames2(4).Names={'r','h','zeta', 'epsilon_j','I_j','alpha','delta', 'A','SSdivw', 'Tr_beq','workinglifeincome','g','agej'};
-FnsToEvaluate_Income = @(aprime_val,a_val,z_val,r,h,zeta, epsilon_j,I_j,alpha,delta, A,SSdivw, Tr_beq,workinglifeincome,g,agej) ImrohorogluImrohorogluJoines1995_IncomeFn(aprime_val,a_val,z_val,r,h,zeta, epsilon_j,I_j,alpha,delta, A,SSdivw, Tr_beq,workinglifeincome,g,agej); % Income
-FnsToEvaluate2={FnsToEvaluate_K,FnsToEvaluate_N,FnsToEvaluate_C, FnsToEvaluate_Income};
+FnsToEvaluate2.K = @(aprime,a,z) a; % Aggregate assets K
+FnsToEvaluate2.N = @(aprime,a,z,I_j,h,epsilon_j) I_j*h*epsilon_j*z; % Aggregate effective labour supply (in efficiency units), I1998 calls this N
+FnsToEvaluate2.C = @(aprime,a,z,r,tau_u, tau_s,h,zeta,epsilon_j,I_j,alpha,delta, A,SSdivw, Tr_beq,workinglifeincome,g,agej,MedicalShock,LumpSum) ImrohorogluImrohorogluJoines1995_ConsumptionFn(aprime,a,z, r,tau_u, tau_s,h,zeta,epsilon_j,I_j,alpha,delta, A,SSdivw, Tr_beq,workinglifeincome,g,agej,MedicalShock,LumpSum); % Consumption
+FnsToEvaluate2.Income = @(aprime,a,z,r,h,zeta, epsilon_j,I_j,alpha,delta, A,SSdivw, Tr_beq,workinglifeincome,g,agej) ImrohorogluImrohorogluJoines1995_IncomeFn(aprime,a,z,r,h,zeta, epsilon_j,I_j,alpha,delta, A,SSdivw, Tr_beq,workinglifeincome,g,agej); % Income
+% Note: the previous utility formula would have been incorrect
 
-AggVars2=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate2, Params, FnsToEvaluateParamNames2, n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,[],simoptions);
+AggVars2=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate2, Params, [], n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,[],simoptions);
 
-K=AggVars2(1);
-N=AggVars2(2);
-C=AggVars2(3);
+K=AggVars2.K.Mean;
+N=AggVars2.N.Mean;
+C=AggVars2.C.Mean;
 Q=Params.A*(K^(Params.alpha))*(N^(1-Params.alpha)); % Cobb-Douglas production fn
 
 Params.w=(1-Params.alpha)*(Params.A^(1/(1-Params.alpha)))*((Params.r+Params.delta)/Params.alpha)^(Params.alpha/(Params.alpha-1));
@@ -328,7 +300,7 @@ fprintf('Average Utility (value fn): %8.3f \n ', sum(sum(sum(V.*StationaryDist))
 fprintf('K/Q: %8.3f \n ', K/Q);
 
 %% Some life-cycle profiles for income, consumption, and assets
-LifeCycleProfiles=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvaluate2,FnsToEvaluateParamNames2,Params,0,n_a,n_z,N_j,0,a_grid,z_grid,simoptions);
+LifeCycleProfiles=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvaluate2,[],Params,0,n_a,n_z,N_j,0,a_grid,z_grid,simoptions);
 % (this creates much more than just the 'age conditional mean' profiles that we use here)
 % (Note: when productivity growth is non-zero then you would need to correct some of these)
 % I have assumed income includes capital income, unemployment benefits and
@@ -338,4 +310,4 @@ LifeCycleProfiles=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvalu
 % social security benefits.
 
 %% To create Figures 6 and 7 you would also need the value of assets on the grid
-ValuesOnGrid=EvalFnOnAgentDist_ValuesOnGrid_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate2, Params, FnsToEvaluateParamNames2, n_d, n_a, n_z, N_j, d_grid, a_grid, z_grid,[],simoptions);
+ValuesOnGrid=EvalFnOnAgentDist_ValuesOnGrid_FHorz_Case1(Policy, FnsToEvaluate2, Params, [], n_d, n_a, n_z, N_j, d_grid, a_grid, z_grid,[],simoptions);
