@@ -1,13 +1,9 @@
-function GeneralEqmConditions_and_absOmega0minusOmega1=IIJ1995_absOmega0minusOmega1(GEprices_and_L,Omega1,Params,jequaloneDist,AgeWeightsParamNames,n_d, n_a, n_z, N_j, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, FnsToEvaluate2, GeneralEqmEqns, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, FnsToEvaluateParamNames2, GeneralEqmEqnParamNames, GEPriceParamNames,heteroagentoptions,simoptions,vfoptions)
+function GeneralEqmConditions_and_absOmega0minusOmega1=IIJ1995_absOmega0minusOmega1(GEprices_and_L,Omega1,Params,jequaloneDist,AgeWeightsParamNames,n_d, n_a, n_z, N_j, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, FnsToEvaluate2, GeneralEqmEqns, DiscountFactorParamNames, GEPriceParamNames,heteroagentoptions,simoptions,vfoptions)
 % Welfare with compensation L in each period of life and without social security
 
-Params.b=GEprices_and_L(1);
-Params.tau_u=GEprices_and_L(2);
-Params.tau_s=GEprices_and_L(3);
-Params.Tr_beq=GEprices_and_L(4);
-Params.LumpSum=GEprices_and_L(5);
-
-GEprices=GEprices_and_L(1:4);
+Params.r=GEprices_and_L(1);
+Params.Tr_beq=GEprices_and_L(2);
+Params.LumpSum=GEprices_and_L(3);
 
 N_z=prod(n_z);
 
@@ -42,16 +38,22 @@ end
 %% 
 
 
-[V, Policy]=ValueFnIter_Case1_FHorz(n_d,n_a,n_z,N_j, d_grid, a_grid, z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames,vfoptions);
+[V, Policy]=ValueFnIter_Case1_FHorz(n_d,n_a,n_z,N_j, d_grid, a_grid, z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [],vfoptions);
 StationaryDist=StationaryDist_FHorz_Case1(jequaloneDist,AgeWeightsParamNames,Policy,n_d,n_a,n_z,N_j,pi_z,Params,simoptions);
 
 % Calculate the general eqm conditions
-AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,[],simoptions);
-GeneralEqmConditionsVec=real(GeneralEqmConditions_Case1(AggVars,GEprices, GeneralEqmEqns, Params,GeneralEqmEqnParamNames));
+AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,[],simoptions);
+
+AggVarNames=fieldnames(AggVars); % Using GeneralEqmEqns as a struct presupposes using FnsToEvaluate (and hence AggVars) as a stuct
+for ii=1:length(AggVarNames)
+    Params.(AggVarNames{ii})=AggVars.(AggVarNames{ii}).Mean;
+end
+GeneralEqmConditionsVec=real(GeneralEqmConditions_Case1_v2(GeneralEqmEqns, Params));
 
 % Calculate absOmega0minusOmega1
-ValuesOnGrid=EvalFnOnAgentDist_ValuesOnGrid_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate2, Params, FnsToEvaluateParamNames2, n_d, n_a, n_z, N_j, d_grid, a_grid, z_grid,[],simoptions);
-UtilityOnGrid=shiftdim(ValuesOnGrid(5,:,:,:),1);
+FnsToEvaluate3.Utility=FnsToEvaluate2.Utility;% Only use FnsToEvaluate2.Utility in ValuesOnGrid, just to speed things up
+ValuesOnGrid=EvalFnOnAgentDist_ValuesOnGrid_FHorz_Case1(Policy, FnsToEvaluate3, Params, [], n_d, n_a, n_z, N_j, d_grid, a_grid, z_grid,[],simoptions);
+UtilityOnGrid=ValuesOnGrid.Utility(:,:,:);
 discountongrid=shiftdim(cumprod(Params.beta*Params.sj),-1);
 AgeConditionalStationaryDist=StationaryDist./sum(sum(StationaryDist,1),2);
 Omega0=sum(sum(sum(discountongrid.*AgeConditionalStationaryDist.*UtilityOnGrid)));
@@ -60,7 +62,7 @@ absOmega0minusOmega1=abs(Omega0-Omega1);
 % Get things ready to output and print progress
 GeneralEqmConditionsVec=[GeneralEqmConditionsVec,absOmega0minusOmega1];
 
-heteroagentoptions.multiGEweights=[1,1,1,1,5]; % The magnitude of absOmega0minusOmega1 is small so I multiply it by 5 to ensure it is given some importance.
+heteroagentoptions.multiGEweights=[1,1,5]; % The magnitude of absOmega0minusOmega1 is small so I multiply it by 5 to ensure it is given some importance.
 GeneralEqmConditions_and_absOmega0minusOmega1=sum(abs(heteroagentoptions.multiGEweights.*GeneralEqmConditionsVec));
 
 GeneralEqmConditions_and_absOmega0minusOmega1=gather(GeneralEqmConditions_and_absOmega0minusOmega1);
