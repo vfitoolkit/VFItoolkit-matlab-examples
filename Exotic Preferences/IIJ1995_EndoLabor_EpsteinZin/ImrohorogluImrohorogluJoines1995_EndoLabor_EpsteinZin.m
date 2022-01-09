@@ -4,7 +4,7 @@
 % Main steps in adding endogenous labor are:
 % 1. Add n_l, l_grid (and change n_d , d_grid)
 % 2. Add the relevant parameters to Params (gamma_c, gamma_l, chi, theta)
-% 3. Change n_z, z_grid, pi_s, statdist_z (as z is now labor productivity)
+% 3. Change n_z, z_grid, pi_z, statdist_z (as z is now labor productivity)
 % 4. Modify the return function (both the budget constraint and the utility fn)
 % 5. Modify the 'FnsToEvaluate' to include the decision variable l
 % 6. Add 'w' to GEPriceParamNames and add a general eqm condition relating to labor market clearance.
@@ -134,16 +134,15 @@ Params.LumpSum=0;  % They are by definition zero whenever not calculating the we
 
 %% Grids and exogenous shocks
 l_grid=linspace(0,1,n_l)';
-k_grid=18*(linspace(0,1,n_k).^3)'; % Grid on capital
+k_grid=20*(linspace(0,1,n_k).^3)'; % Grid on capital
 
-Params.rho=0.6;
-Params.sigma=0.2;
+Params.rho_z=0.6;
+Params.sigma_z=0.2;
+Params.sigma_epsilon_z=Params.sigma_z*(1-Params.rho_z); % Std deviation of the innovations to z
 % Create markov process for the exogenous labour productivity, z.
-Params.tauchen_q=3;
-[z_grid, pi_z]=TauchenMethod(0,(Params.sigma^2)*(1-Params.rho^2),Params.rho,n_z,Params.tauchen_q);
+[z_grid,pi_z]=discretizeAR1_FarmerToda(0,Params.rho_z,Params.sigma_epsilon_z,n_z); % Farmer-Toda discretizes an AR(1) (is better than Tauchen & Rouwenhorst for rho<0.99)
 [z_mean,z_variance,z_corr,~]=MarkovChainMoments(z_grid,pi_z);
 z_grid=exp(z_grid);
-%Get some info on the markov process
 [Expectation_z,~,~,~]=MarkovChainMoments(z_grid,pi_z); %Since l is exogenous, this will be it's eqm value 
 % Normalize z_grid to make E[z]=1 hold exactly
 z_grid=z_grid./Expectation_z;
@@ -195,26 +194,24 @@ AgeWeightsParamNames={'mewj'}; % Many finite horizon models apply different weig
 %% General equilibrium, and initial parameter values for the general eqm parameters
 
 GEPriceParamNames={'r','tau_u','tau_s','Tr_beq','w'};
-Params.r=0.014; % interest rate on assets
-Params.tau_u=0.015; % set to balance unemployment benefits expenditure
-Params.tau_s=0.08; % set to balance social security benefits expenditure
+Params.r=0.06; % interest rate on assets
+Params.tau_u=0.04; % set to balance unemployment benefits expenditure
+Params.tau_s=0.07; % set to balance social security benefits expenditure
 Params.Tr_beq=0.07; % Accidental bequests (IIJ1995 calls this T)
-Params.w=2.3;
+Params.w=1.6;
 
 
 %% Now, create the return function 
 DiscountFactorParamNames={'beta','sj','gdiscount','gamma','psi'}; % The 'Epstein-Zin parameters' must be the last two of the discount factor parameters.
  
 ReturnFn=@(l,kprime,k,z,r,w,tau_u, tau_s,chi, h,zeta, epsilon_j,I_j,SSdivw, Tr_beq,MedicalShock,workinglifeincome,g,agej,LumpSum, theta) ImrohorogluImrohorogluJoines1995_EndoLabor_EZ_ReturnFn(l,kprime,k,z,r,w,tau_u, tau_s,chi, h,zeta, epsilon_j,I_j,SSdivw, Tr_beq,MedicalShock,workinglifeincome,g,agej,LumpSum, theta)
-ReturnFnParamNames={'r','w','tau_u', 'tau_s','chi', 'h','zeta', 'epsilon_j','I_j','SSdivw', 'Tr_beq','MedicalShock','workinglifeincome','g','agej','LumpSum', 'theta'}; %It is important that these are in same order as they appear in 'ImrohorogluImrohogluJoines1995_EndoLabor_EZ_ReturnFn'
 % Note: MedicalShock,workinglifeincome,g,agej are only required for the extensions of the model. None of these would be needed for just the baseline model.
 
 %% Now solve the value function iteration problem, just to check that things are working before we go to General Equilbrium
 
 disp('Test ValueFnIter')
-vfoptions=struct(); % Use the defaults
 tic;
-[V, Policy]=ValueFnIter_Case1_FHorz(n_d,n_a,n_z,N_j, d_grid, a_grid, z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames,vfoptions);
+[V, Policy]=ValueFnIter_Case1_FHorz(n_d,n_a,n_z,N_j, d_grid, a_grid, z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [],vfoptions);
 toc
 
 % max(max(max(max(Policy))))<n_a % Double check that never try to leave top of asset grid.
@@ -233,46 +230,30 @@ toc
 
 %% Set up the General Equilibrium conditions (on assets/interest rate, assuming a representative firm with Cobb-Douglas production function)
 
-% Aggregates (important that ordering of Names and Functions is the same)
-FnsToEvaluateParamNames=struct();
-FnsToEvaluateParamNames(1).Names={};
-FnsToEvaluate_K = @(d_val,aprime_val,a_val,z_val) a_val; % Aggregate assets K
-FnsToEvaluateParamNames(2).Names={'I_j','h','epsilon_j'};
-FnsToEvaluate_L = @(d_val,aprime_val,a_val,z_val,I_j,h,epsilon_j) I_j*h*epsilon_j*d_val*z_val; % Aggregate effective labour supply (in efficiency units), I1998 calls this N
-FnsToEvaluateParamNames(3).Names={'sj','n'};
-FnsToEvaluate_Tr = @(d_val,aprime_val,a_val,z_val,sj,n) (1-sj)*aprime_val/(1+n); % Tr, accidental bequest transfers % The divided by (1+n) is due to population growth and because this is Tr_{t+1}
-FnsToEvaluateParamNames(4).Names={'r','w','tau_u', 'tau_s','h','zeta','theta','epsilon_j','I_j','SSdivw', 'Tr_beq','workinglifeincome','g','agej','MedicalShock','LumpSum'}; 
-FnsToEvaluate_C = @(d_val,aprime_val,a_val,z_val,r,w,tau_u, tau_s,h,zeta,theta,epsilon_j,I_j,SSdivw, Tr_beq,workinglifeincome,g,agej,MedicalShock,LumpSum) ImrohorogluImrohorogluJoines1995_EndoLabor_ConsumptionFn(d_val,aprime_val,a_val,z_val,r,w,tau_u, tau_s,h,zeta,theta,epsilon_j,I_j,SSdivw, Tr_beq,workinglifeincome,g,agej,MedicalShock,LumpSum);
-FnsToEvaluateParamNames(5).Names={'r','w','A','alpha','delta','h','I_j','epsilon_j'};
-FnsToEvaluate_5 = @(d_val,aprime_val,a_val,z_val,r,w,A,alpha,delta,h,I_j,epsilon_j) w*I_j*h*d_val*epsilon_j*z_val; % Labour income (this is also the tax base for various taxes)
-FnsToEvaluateParamNames(6).Names={'r','w','A','alpha','delta','h','I_j'};
-FnsToEvaluate_6 = @(d_val,aprime_val,a_val,z_val,r,w,A,alpha,delta,h,I_j) w*I_j*h*(d_val==0); % Potential Labour income (in worked 100 percent of time) of the unemployed (the unemployment benefits are set as a fraction, zeta, of this)
-FnsToEvaluateParamNames(7).Names={'SSdivw','r','w','A','alpha','delta','I_j'};
-FnsToEvaluate_7 = @(d_val,aprime_val,a_val,z_val,SSdivw,r,w,A,alpha,delta,I_j) w*SSdivw*(1-I_j); % Total social security benefits: w*SSdivw*(1-I_j)
-FnsToEvaluate={FnsToEvaluate_K,FnsToEvaluate_L,FnsToEvaluate_Tr,FnsToEvaluate_C,FnsToEvaluate_5,FnsToEvaluate_6,FnsToEvaluate_7};
+% Functions to Evaluate
+FnsToEvaluate.K = @(d,aprime,a,z) a; % Aggregate assets K
+FnsToEvaluate.L = @(d,aprime,a,z,I_j,h,epsilon_j) I_j*h*epsilon_j*d*z; % Aggregate effective labour supply (in efficiency units), I1998 calls this N
+FnsToEvaluate.Tr = @(d,aprime,a,z,sj,n) (1-sj)*aprime/(1+n); % Tr, accidental bequest transfers % The divided by (1+n) is due to population growth and because this is Tr_{t+1}
+FnsToEvaluate.C = @(d,aprime,a,z,r,w,tau_u, tau_s,h,zeta,theta,epsilon_j,I_j,SSdivw, Tr_beq,workinglifeincome,g,agej,MedicalShock,LumpSum) ImrohorogluImrohorogluJoines1995_EndoLabor_ConsumptionFn(d,aprime,a,z,r,w,tau_u, tau_s,h,zeta,theta,epsilon_j,I_j,SSdivw, Tr_beq,workinglifeincome,g,agej,MedicalShock,LumpSum);
+FnsToEvaluate.LaborIncome = @(d,aprime,a,z,r,w,A,alpha,delta,h,I_j,epsilon_j) w*I_j*h*d*epsilon_j*z; % Labour income (this is also the tax base for various taxes)
+FnsToEvaluate.PotLaborIncome = @(d,aprime,a,z,r,w,A,alpha,delta,h,I_j) w*I_j*h*(d==0); % Potential Labour income (in worked 100 percent of time) of the unemployed (the unemployment benefits are set as a fraction, zeta, of this)
+FnsToEvaluate.SSbenefits = @(d,aprime,a,z,SSdivw,r,w,A,alpha,delta,I_j) w*SSdivw*(1-I_j); % Total social security benefits: w*SSdivw*(1-I_j)
 
 % General Equilibrium Equations
-% Recall that GEPriceParamNames={'r','tau_u','tau_s','Tr_beq','w'}; In following lines p is the vector of these and so, e.g., p(2) is G.
-GeneralEqmEqnParamNames=struct();
-GeneralEqmEqnParamNames(1).Names={'A','alpha','delta'};
-GeneralEqmEqn_1 = @(AggVars,GEprices,A,alpha,delta) GEprices(1)-(A*(alpha)*(AggVars(1)^(alpha-1))*(AggVars(2)^(1-alpha))-delta); % Rate of return on assets is related to Marginal Product of Capital
-GeneralEqmEqnParamNames(2).Names={'zeta'};
-GeneralEqmEqn_2 = @(AggVars,GEprices,zeta) GEprices(2)*AggVars(5)-zeta*AggVars(6); % Equation (16)
-GeneralEqmEqnParamNames(3).Names={};
-GeneralEqmEqn_3 = @(AggVars,GEprices) GEprices(3)*AggVars(5)-AggVars(7); % Equation (15)
-GeneralEqmEqnParamNames(4).Names={};
-GeneralEqmEqn_4 = @(AggVars,GEprices) GEprices(4)-AggVars(3); % Equation (17): Accidental bequests (adjusted for population growth) are equal to transfers received (this is essentially eqn 14)
-GeneralEqmEqnParamNames(5).Names={'A','alpha'};
-GeneralEqmEqn_5 = @(AggVars,GEprices,A,alpha) GEprices(5)-A*(1-alpha)*(AggVars(1)^(alpha))*(AggVars(2)^(-alpha)); % wage is related to Marginal Product of Labor
-GeneralEqmEqns={GeneralEqmEqn_1, GeneralEqmEqn_2, GeneralEqmEqn_3, GeneralEqmEqn_4, GeneralEqmEqn_5};
+% Recall that GEPriceParamNames={'r','tau_u','tau_s','Tr_beq','w'};
+GeneralEqmEqns.capitalmarket = @(r,K,L,A,alpha,delta) r-(A*(alpha)*(K^(alpha-1))*(L^(1-alpha))-delta); % Rate of return on assets is related to Marginal Product of Capital
+GeneralEqmEqns.UnempGenerosity = @(tau_u,LaborIncome,PotLaborIncome,zeta) tau_u*LaborIncome-zeta*PotLaborIncome; % Equation (16)
+GeneralEqmEqns.SSbalance = @(tau_s,LaborIncome,SSbenefits) tau_s*LaborIncome-SSbenefits; % Equation (15)
+GeneralEqmEqns.Bequests = @(Tr_beq,Tr) Tr_beq-Tr; % Equation (17): Accidental bequests (adjusted for population growth) are equal to transfers received (this is essentially eqn 14)
+GeneralEqmEqns.labormarket = @(w,K,L,A,alpha) w-A*(1-alpha)*(K^(alpha))*(L^(-alpha)); % wage is related to Marginal Product of Labor
 
 %% Test
 disp('Test AggVars')
-AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,[],simoptions);
+AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,[],simoptions);
 
 %% Calculate the general equilibrium
 heteroagentoptions.verbose=1; % Give info on how the General eqm conditions are going
-[p_eqm,p_eqm_index, GeneralEqmEqnsValues]=HeteroAgentStationaryEqm_Case1_FHorz(jequaloneDist,AgeWeightsParamNames,n_d, n_a, n_z, N_j, 0, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, GEPriceParamNames,heteroagentoptions,simoptions,vfoptions);
+[p_eqm,p_eqm_index, GeneralEqmEqnsValues]=HeteroAgentStationaryEqm_Case1_FHorz(jequaloneDist,AgeWeightsParamNames,n_d, n_a, n_z, N_j, 0, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions,simoptions,vfoptions);
 Params.r=p_eqm.r;
 Params.w=p_eqm.w;
 Params.tau_u=p_eqm.tau_u;
@@ -280,27 +261,21 @@ Params.tau_s=p_eqm.tau_s;
 Params.Tr_beq=p_eqm.Tr_beq;
 
 %% Calculate some model statistics of the kind reported in IIJ1995
-[V, Policy]=ValueFnIter_Case1_FHorz(n_d,n_a,n_z,N_j, d_grid, a_grid, z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames,vfoptions);
+[V, Policy]=ValueFnIter_Case1_FHorz(n_d,n_a,n_z,N_j, d_grid, a_grid, z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [],vfoptions);
 StationaryDist=StationaryDist_FHorz_Case1(jequaloneDist,AgeWeightsParamNames,Policy,n_d,n_a,n_z,N_j,pi_z,Params,simoptions);
 
-AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,[],simoptions);
+AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,[],simoptions);
 
-FnsToEvaluateParamNames2=struct();
-FnsToEvaluateParamNames2(1).Names={};
-FnsToEvaluate_K = @(d_val,aprime_val,a_val,z_val) a_val; % Aggregate assets K
-FnsToEvaluateParamNames2(2).Names={'I_j','h','epsilon_j'};
-FnsToEvaluate_N = @(d_val,aprime_val,a_val,z_val,I_j,h,epsilon_j) I_j*h*d_val*epsilon_j*z_val; % Aggregate effective labour supply (in efficiency units), I1998 calls this N
-FnsToEvaluateParamNames2(3).Names={'r','w','tau_u', 'tau_s','h','zeta','theta','epsilon_j','I_j','SSdivw', 'Tr_beq','workinglifeincome','g','agej','MedicalShock','LumpSum'}; 
-FnsToEvaluate_C = @(d_val,aprime_val,a_val,z_val,r,w,tau_u, tau_s,h,zeta,theta,epsilon_j,I_j,SSdivw, Tr_beq,workinglifeincome,g,agej,MedicalShock,LumpSum) ImrohorogluImrohorogluJoines1995_EndoLabor_ConsumptionFn(d_val,aprime_val,a_val,z_val,r,w,tau_u, tau_s,h,zeta,theta,epsilon_j,I_j,SSdivw, Tr_beq,workinglifeincome,g,agej,MedicalShock,LumpSum);
-FnsToEvaluateParamNames2(4).Names={'w','h','zeta', 'epsilon_j','I_j','SSdivw', 'Tr_beq','workinglifeincome','g','agej'};
-FnsToEvaluate_Income = @(d_val,aprime_val,a_val,z_val,w,h,zeta, epsilon_j,I_j,SSdivw, Tr_beq,workinglifeincome,g,agej) ImrohorogluImrohorogluJoines1995_EndoLabor_IncomeFn(d_val,aprime_val,a_val,z_val,w,h,zeta, epsilon_j,I_j,SSdivw, Tr_beq,workinglifeincome,g,agej);
-FnsToEvaluate2={FnsToEvaluate_K,FnsToEvaluate_N,FnsToEvaluate_C, FnsToEvaluate_Income};
+FnsToEvaluate2.K = @(d,aprime,a,z) a; % Aggregate assets K
+FnsToEvaluate2.N = @(d,aprime,a,z,I_j,h,epsilon_j) I_j*h*d*epsilon_j*z; % Aggregate effective labour supply (in efficiency units), I1998 calls this N
+FnsToEvaluate2.C = @(d,aprime,a,z,r,w,tau_u, tau_s,h,zeta,theta,epsilon_j,I_j,SSdivw, Tr_beq,workinglifeincome,g,agej,MedicalShock,LumpSum) ImrohorogluImrohorogluJoines1995_EndoLabor_ConsumptionFn(d,aprime,a,z,r,w,tau_u, tau_s,h,zeta,theta,epsilon_j,I_j,SSdivw, Tr_beq,workinglifeincome,g,agej,MedicalShock,LumpSum);
+FnsToEvaluate2.Income = @(d,aprime,a,z,w,h,zeta, epsilon_j,I_j,SSdivw, Tr_beq,workinglifeincome,g,agej) ImrohorogluImrohorogluJoines1995_EndoLabor_IncomeFn(d,aprime,a,z,w,h,zeta, epsilon_j,I_j,SSdivw, Tr_beq,workinglifeincome,g,agej);
 
-AggVars2=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate2, Params, FnsToEvaluateParamNames2, n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,[],simoptions);
+AggVars2=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate2, Params, [], n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,[],simoptions);
 
-K=AggVars2(1);
-N=AggVars2(2);
-C=AggVars2(3);
+K=AggVars2.K.Mean;
+N=AggVars2.N.Mean;
+C=AggVars2.C.Mean;
 Q=Params.A*(K^(Params.alpha))*(N^(1-Params.alpha)); % Cobb-Douglas production fn
 
 fprintf('Social Security replacement rate: %8.2f (theta in IIJ1995 notation, b in my notation) \n ', Params.b);
@@ -314,7 +289,7 @@ fprintf('Average Utility (value fn): %8.3f \n ', sum(sum(sum(V.*StationaryDist))
 fprintf('K/Q: %8.3f \n ', K/Q);
 
 %% Some life-cycle profiles for income, consumption, and assets
-LifeCycleProfiles=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvaluate2,FnsToEvaluateParamNames2,Params,n_d,n_a,n_z,N_j,d_grid,a_grid,z_grid,simoptions);
+LifeCycleProfiles=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvaluate2,[],Params,n_d,n_a,n_z,N_j,d_grid,a_grid,z_grid,simoptions);
 % (this creates much more than just the 'age conditional mean' profiles that we use here)
 % (Note: when productivity growth is non-zero then you would need to correct some of these)
 % I have assumed income includes capital income, unemployment benefits and
@@ -324,16 +299,12 @@ LifeCycleProfiles=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvalu
 % social security benefits.
 
 %% To create Figures 6 and 7 you would also need the value of assets on the grid
-ValuesOnGrid=EvalFnOnAgentDist_ValuesOnGrid_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate2, Params, FnsToEvaluateParamNames2, n_d, n_a, n_z, N_j, d_grid, a_grid, z_grid,[],simoptions);
-
-%% The 'ExampleFull' also does a 'welfare' evaluation.
+ValuesOnGrid=EvalFnOnAgentDist_ValuesOnGrid_FHorz_Case1(Policy, FnsToEvaluate2, Params, [], n_d, n_a, n_z, N_j, d_grid, a_grid, z_grid,[],simoptions);
 
 %% With endogenous labor, let's also take a look at what fraction of the population is not working (is 0.06 in IIJ1995 with exogenous labor)
-FnsToEvaluateParamNames3(1).Names={};
-FnsToEvaluate_l0 = @(d_val,aprime_val,a_val,z_val) (d_val==0); % Not working
-FnsToEvaluate3={FnsToEvaluate_l0};
+FnsToEvaluate3.l0 = @(d,aprime,a,z) (d==0); % Not working
 
-FractionOfPopulationNotWorking=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate3, Params, FnsToEvaluateParamNames3, n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,[],simoptions);
+FractionOfPopulationNotWorking=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate3, Params, [], n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,[],simoptions);
 
 FractionOfPopulationNotWorking
 % Note that if doing this endogenous labor model more seriously we would choose chi and theta to target this.
