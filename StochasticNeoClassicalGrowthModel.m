@@ -7,7 +7,6 @@
 %
 % If using without GPU it is recommended to change value of n_k (line 17 of code)
 
-
 Javier=0;   %If you set this parameter to 0 then the parameters will all be set to those used by Aldrich, Fernandez-Villaverde, Gallant, & Rubio-Ramirez (2011)
 
 %% Set up
@@ -17,7 +16,7 @@ n_z=2^2;
 n_k=2^12; % Note: GPU can easily handle this, CPUs will struggle, I recommend setting to 2^9 if using CPUs.
 
 %Discounting rate
-beta = 0.96;
+Params.beta = 0.96;
 
 %Give the parameter values (Params will be a 'structure' containing all the parameter values)
 Params.alpha = 0.33;
@@ -35,24 +34,20 @@ if Javier==0
     Params.rho=0.95;
     Params.sigma_epsilon=0.005;
     Params.sigmasq_epsilon=Params.sigma_epsilon^2;
-    vfoptions.tolerance=(1-beta)*10^(-8); % Toolkit default is 10^(-9)
+    vfoptions.tolerance=(1-Params.beta)*10^(-8); % Toolkit default is 10^(-9)
     vfoptions.howards=20; % Toolkit default is 80
 end
 
-% Params has been created as a structure. You can create the individual
-% parameters from the structure by running the following command
-CreateIndividualParams(Params)
 
 %% Compute the steady state
-K_ss=((alpha*beta)/(1-beta*(1-delta)))^(1/(1-alpha));
-X_ss= delta*K_ss;
+K_ss=((Params.alpha*Params.beta)/(1-Params.beta*(1-Params.delta)))^(1/(1-Params.alpha));
+X_ss= Params.delta*K_ss;
 %These are not really needed; we just use them to determine the grid on
 %capital. I mainly calculate them to stay true to original article.
 
 %% Create grids (grids are defined as a column vectors)
-
-q=3; % A parameter needed for the Tauchen Method
-[z_grid, pi_z]=TauchenMethod(0,sigmasq_epsilon,rho,n_z,q); %[states, transmatrix]=TauchenMethod_Param(mew,sigmasq,rho,znum,q), transmatix is (z,zprime)
+Tauchen_q=3; %Parameter for the Tauchen method
+[z_grid,pi_z]=discretizeAR1_Tauchen(0,Params.rho,Params.sigma_epsilon,n_z,Tauchen_q);
 
 k_grid=linspace(0,20*K_ss,n_k)'; % Grids should always be declared as column vectors
 
@@ -60,7 +55,6 @@ k_grid=linspace(0,20*K_ss,n_k)'; % Grids should always be declared as column vec
 DiscountFactorParamNames={'beta'};
 
 ReturnFn=@(aprime_val, a_val, s_val, gamma, alpha, delta) StochasticNeoClassicalGrowthModel_ReturnFn(aprime_val, a_val, s_val, gamma, alpha, delta);
-ReturnFnParamNames={'gamma', 'alpha', 'delta'}; %It is important that these are in same order as they appear in 'StochasticNeoClassicalGrowthModel_ReturnFn'
 
 %% Solve
 %Do the value function iteration. Returns both the value function itself,
@@ -69,17 +63,13 @@ d_grid=0; %no d variable
 n_d=0; %no d variable
 
 tic;
-[V, Policy]=ValueFnIter_Case1(n_d,n_k,n_z,d_grid,k_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames, vfoptions);
+[V, Policy]=ValueFnIter_Case1(n_d,n_k,n_z,d_grid,k_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
 time=toc;
 
 fprintf('Time to solve the value function iteration was %8.2f seconds. \n', time)
 
 
 %% Draw a graph of the value function
-
-%surf(V)
-
-% Or to get 'nicer' x and y axes use
 surf(k_grid*ones(1,n_z),ones(n_k,1)*z_grid',V)
 
 
