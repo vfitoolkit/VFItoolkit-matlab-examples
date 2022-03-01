@@ -11,11 +11,15 @@
 
 %% Set some basic variables
 
-n_k=2^7;%2^9;
-n_s=11; %21;
-n_p=0; % Normally you will want n_p=0, setting a non-zero value here activates the use of a grid on prices.
+% VFI Toolkit thinks of there as being:
+% k: an endogenous state variable (assets)
+% z: an exogenous state variable (exogenous labor supply)
 
-%Parameters
+% Size of the grids
+n_k=2^9;%2^9;
+n_z=11; %21;
+
+% Parameters
 Params.beta=0.96; %Model period is one-sixth of a year
 Params.alpha=0.36;
 Params.delta=0.08;
@@ -23,128 +27,100 @@ Params.mu=3;
 Params.sigma=0.2;
 Params.rho=0.6;
 
-Params.q=3; %Footnote 33 of Aiyagari(1993WP, pg 25) implicitly says that he uses q=3
-
-% Params has been created as a structure. You can create the individual
-% parameters from the structure by running the following command
-CreateIndividualParams(Params)
-
-%% Some Toolkit options (most of these are anyway just being set to toolkit defaults)
-mcmomentsoptions.T=10^4;
-mcmomentsoptions.Tolerance=10^(-9);
-
-vfoptions.lowmemory=0;
-
-simoptions.burnin=10^4;
-simoptions.simperiods=10^5; % For an accurate solution you will either need simperiod=10^5 and iterate=1, or simperiod=10^6 (iterate=0).
-simoptions.iterate=1;
-
-heteroagentoptions.verbose=1;
-
 %% Set up the exogenous shock process
-%Create markov process for the exogenous labour productivity, l.
-% q=3; %Footnote 33 of Aiyagari(1993WP, pg 25) implicitly says that he uses q=3
-[s_grid, pi_s]=TauchenMethod(0,(Params.sigma^2)*(1-Params.rho^2),Params.rho,n_s,Params.q);
+% Create markov process for the exogenous labour productivity, l.
+Tauchen_q=3; % Footnote 33 of Aiyagari(1993WP, pg 25) implicitly says that he uses q=3
+[z_grid,pi_z]=discretizeAR1_Tauchen(0,Params.rho,sqrt((1-Params.rho^2)*Params.sigma^2),n_z,Tauchen_q);
+% Note: sigma is standard deviations of s, input needs to be standard deviation of the innovations
+% Because s is AR(1), the variance of the innovations is (1-rho^2)*sigma^2
 
-%[s_grid, pi_s]=TauchenMethod_Param(0,(sigma^2)*(1-rho^2),rho,7,3); %This is the process for ln(l). Aiyagari uses 7 states, 
-[s_mean,s_variance,s_corr,~]=MarkovChainMoments(s_grid,pi_s,mcmomentsoptions);
-s_grid=exp(s_grid);
-%Get some info on the markov process
-[Expectation_l,~,~,~]=MarkovChainMoments(s_grid,pi_s,mcmomentsoptions); %Since l is exogenous, this will be it's eqm value 
-%Note: Aiyagari (1994) actually then normalizes l by dividing it by
-%Expectation_l (so that the resulting process has expectaion equal to 1
-%(see Aiyagari (1993WP), footnote 33 pg 25-26).
-%The following three lines do just this.
-s_grid=s_grid./Expectation_l;
-[Expectation_l,~,~,~]=MarkovChainMoments(s_grid,pi_s,mcmomentsoptions);
+[z_mean,z_variance,z_corr,~]=MarkovChainMoments(z_grid,pi_z);
+z_grid=exp(z_grid);
+% Get some info on the markov process
+[Expectation_l,~,~,~]=MarkovChainMoments(z_grid,pi_z); %Since l is exogenous, this will be it's eqm value 
+% Note: Aiyagari (1994) actually then normalizes l by dividing it by Expectation_l (so that the resulting process has expectation equal to 1)
+z_grid=z_grid./Expectation_l;
+[Expectation_l,~,~,~]=MarkovChainMoments(z_grid,pi_z);
+% If you look at Expectation_l you will see it is now equal to 1
+Params.Expectation_l=Expectation_l;
 
 %% Grids
 
-%In the absence of idiosyncratic risk, the steady state equilibrium is given by
+% In the absence of idiosyncratic risk, the steady state equilibrium is given by
 r_ss=1/Params.beta-1;
 K_ss=((r_ss+Params.delta)/Params.alpha)^(1/(Params.alpha-1)); %The steady state capital in the absence of aggregate uncertainty.
 
 % Set grid for asset holdings
-%Aiyagari uses 25 points, but with a piecewise-linear approx. see Aiyagari (1993WP, pg 28).
-%His grid is not directly on k, but implicitly his k grid runs from zero up
-%to k_max, where k_max is given by f(k_max,1)=delta*k_max
-%k_max=delta^(1/(alpha-1));
-%Doing this k_max is slightly less than 10*K_ss. But if I use this as the upper limit on
-%the grid the results are wrong (in that increasing this to 15 or 20*K_ss
-%gives different results). It might be that Aiyagari gets away with this
-%due to his use of piecewise-linear approximation (ie. that policy fn is
-%almost linear in this region anyway).
-nk1=floor(n_k/3); nk2=floor(n_k/3); nk3=n_k-nk1-nk2;
-k_grid=sort([linspace(0,K_ss,nk1),linspace(K_ss+0.0001,3*K_ss,nk2),linspace(3*K_ss+0.0001,15*K_ss,nk3)]');
+k_grid=10*K_ss*(linspace(0,1,n_k).^3)'; % linspace ^3 puts more points near zero, where the curvature of value and policy functions is higher and where model spends more time
 
-%Bring model into the notational conventions used by the toolkit
+% Bring model into the notational conventions used by the toolkit
 d_grid=0; %There is no d variable
 a_grid=k_grid;
-%pi_s;
-%s_grid
+% pi_z;
+% z_grid
 
 n_d=0;
 n_a=n_k;
-%n_s
+% n_z
 
-%Create descriptions of SS values as functions of d_grid, a_grid, s_grid &
-%pi_s (used to calculate the integral across the SS dist fn of whatever
-%functions you define here)
-FnsToEvaluateParamNames(1).Names={};
-FnsToEvaluateFn_1 = @(aprime_val,a_val,s_val) a_val; %We just want the aggregate assets (which is this periods state)
-FnsToEvaluate={FnsToEvaluateFn_1};
+% Create functions to be evaluated
+FnsToEvaluate.K = @(aprime,a,s) a; %We just want the aggregate assets (which is this periods state)
 
-%Now define the functions for the General Equilibrium conditions
-    %Should be written as LHS of general eqm eqn minus RHS, so that 
-    %the closer the value given by the function is to zero, the closer 
-    %the general eqm condition is to holding.
-%Note: length(AggVars) is as for SSvaluesFn and length(p) is number_p_vars
-GeneralEqmEqnParamNames(1).Names={'alpha','delta'};
-GeneralEqmEqn_1 = @(AggVars,p,alpha,delta) p-(alpha*(AggVars^(alpha-1))*(Expectation_l^(1-alpha))-delta); %The requirement that the interest rate corresponds to the agg capital level
-GeneralEqmEqns={GeneralEqmEqn_1};
+% Now define the functions for the General Equilibrium conditions
+    % Should be written as LHS of general eqm eqn minus RHS, so that the closer the value given by the function is to 
+    % zero, the closer the general eqm condition is to holding.
+GeneralEqmEqns.CapitalMarket = @(r,K,alpha,delta,Expectation_l) r-(alpha*(K^(alpha-1))*(Expectation_l^(1-alpha))-delta); %The requirement that the interest rate corresponds to the agg capital level
+% Inputs can be any parameter, price, or aggregate of the FnsToEvaluate
 
-disp('sizes')
-n_a
-n_s
-n_p
+fprintf('Grid sizes are: %i points for assets, and %i points for exogenous shock \n', n_a,n_z)
 
 %%
 DiscountFactorParamNames={'beta'};
 
-ReturnFn=@(aprime_val, a_val, s_val,alpha,delta,mu,r) Aiyagari1994_ReturnFn(aprime_val, a_val, s_val,alpha,delta,mu,r);
-ReturnFnParamNames={'alpha','delta','mu','r'}; %It is important that these are in same order as they appear in 'Aiyagari1994_ReturnFn'
+ReturnFn=@(aprime, a, s, alpha,delta,mu,r) Aiyagari1994_ReturnFn(aprime, a, s,alpha,delta,mu,r);
+% The first inputs must be: next period endogenous state, endogenous state, exogenous state. Followed by any parameters
 
 %%
 
-%Use the toolkit to find the equilibrium price index
+% Use the toolkit to find the equilibrium price index
 GEPriceParamNames={'r'};
-%Set initial value for interest rates (Aiyagari proves that with idiosyncratic
-%uncertainty, the eqm interest rate is limited above by it's steady state value
-%without idiosyncratic uncertainty, that is that r<r_ss).
-Params.r=0.04;
+% Set initial value for interest rates (Aiyagari proves that with idiosyncratic
+% uncertainty, the eqm interest rate is limited above by it's steady state value
+% without idiosyncratic uncertainty, that is that r<r_ss).
+Params.r=0.038;
+
 
 %%
-% Initial guess for value function.
-disp('Calculating price vector corresponding to the stationary eqm')
-[p_eqm,~,GeneralEqmCondn]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_s, n_p, pi_s, d_grid, a_grid, s_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, GEPriceParamNames,heteroagentoptions, simoptions, vfoptions);
+% Solve for the stationary general equilbirium
+vfoptions=struct(); % Use default options for solving the value function (and policy fn)
+simoptions=struct(); % Use default options for solving for stationary distribution
+heteroagentoptions.verbose=1; % verbose means that you want it to give you feedback on what is going on
 
-p_eqm
+fprintf('Calculating price vector corresponding to the stationary general eqm \n')
+[p_eqm,~,GeneralEqmCondn]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_z, 0, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions, simoptions, vfoptions);
+
+p_eqm % The equilibrium values of the GE prices
 
 %% Now that we have the GE, let's calculate a bunch of related objects
+Params.r=p_eqm.r; % Put the equilibrium interest rate into Params so we can use it to calculate things based on equilibrium parameters
+
 % Equilibrium wage
-Params.w=(1-Params.alpha)*((p_eqm.r+Params.delta)/Params.alpha)^(Params.alpha/(Params.alpha-1));
+Params.w=(1-Params.alpha)*((Params.r+Params.delta)/Params.alpha)^(Params.alpha/(Params.alpha-1));
 
-disp('Calculating various equilibrium objects')
-Params.r=p_eqm.r;
-[~,Policy]=ValueFnIter_Case1(n_d,n_a,n_s,d_grid,a_grid,s_grid, pi_s, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames, vfoptions);
+fprintf('Calculating various equilibrium objects \n')
+[V,Policy]=ValueFnIter_Case1(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
+% V is value function
+% Policy is policy function (but as an index of k_grid, not the actual values)
 
-% PolicyValues=PolicyInd2Val_Case1(Policy,n_d,n_a,n_s,d_grid,a_grid);
+% PolicyValues=PolicyInd2Val_Case1(Policy,n_d,n_a,n_s,d_grid,a_grid); % This will give you the policy in terms of values rather than index
 
-StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_s,pi_s, simoptions);
+StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_z,pi_z, simoptions);
 
-AggVars=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate,Params, FnsToEvaluateParamNames,n_d, n_a, n_s, d_grid, a_grid,s_grid);
+AggVars=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid);
 
-% save ./SavedOutput/Aiyagari1994SSObjects.mat p_eqm Policy StationaryDist
+% AggVars contains the aggregate values of the 'FnsToEvaluate' (in this model aggregates are equal to the mean expectation over the agent distribution)
+% Currently the only FnsToEvaluate is assets, so we get aggregate capital stock
+AggVars.K.Mean
 
 % Calculate savings rate:
 % We know production is Y=K^{\alpha}L^{1-\alpha}, and that L=1
@@ -152,41 +128,36 @@ AggVars=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate,Pa
 % In equilibrium K is constant, so aggregate savings is just depreciation, which
 % equals delta*K. The agg savings rate is thus delta*K/Y.
 % So agg savings rate is given by s=delta*K/(K^{\alpha})=delta*K^{1-\alpha}
-aggsavingsrate=Params.delta*AggVars^(1-Params.alpha);
+aggsavingsrate=Params.delta*(AggVars.K.Mean)^(1-Params.alpha);
 
 % Calculate Lorenz curves, Gini coefficients, and Pareto tail coefficients
-FnsToEvaluateParamNames(1).Names={'w'};
-FnsToEvaluate_Earnings = @(aprime_val,a_val,s_val,w) w*s_val;
-FnsToEvaluateParamNames(2).Names={'r','w'};
-FnsToEvaluate_Income = @(aprime_val,a_val,s_val,r,w) w*s_val+(1+r)*a_val;
-FnsToEvaluateParamNames(3).Names={};
-FnsToEvaluate_Wealth = @(aprime_val,a_val,s_val) a_val;
-FnsToEvaluateFnIneq={FnsToEvaluate_Earnings, FnsToEvaluate_Income, FnsToEvaluate_Wealth};
-StationaryDist_LorenzCurves=EvalFnOnAgentDist_LorenzCurve_Case1(StationaryDist, Policy, FnsToEvaluateFnIneq, Params,FnsToEvaluateParamNames, n_d, n_a, n_s, d_grid, a_grid, s_grid);
+FnsToEvaluateIneq.Earnings = @(aprime,a,z,w) w*z;
+FnsToEvaluateIneq.Income = @(aprime,a,z,r,w) w*z+(1+r)*a;
+FnsToEvaluateIneq.Wealth = @(aprime,a,s) a;
+LorenzCurves=EvalFnOnAgentDist_LorenzCurve_Case1(StationaryDist, Policy, FnsToEvaluateIneq, Params,[], n_d, n_a, n_z, d_grid, a_grid, z_grid);
 
 % 3.5 The Distributions of Earnings and Wealth
 %  Gini for Earnings
-EarningsGini=Gini_from_LorenzCurve(StationaryDist_LorenzCurves(1,:));
-IncomeGini=Gini_from_LorenzCurve(StationaryDist_LorenzCurves(2,:));
-WealthGini=Gini_from_LorenzCurve(StationaryDist_LorenzCurves(3,:));
+EarningsGini=Gini_from_LorenzCurve(LorenzCurves.Earnings);
+IncomeGini=Gini_from_LorenzCurve(LorenzCurves.Income);
+WealthGini=Gini_from_LorenzCurve(LorenzCurves.Wealth);
 
 % Calculate inverted Pareto coeff, b, from the top income shares as b=1/[log(S1%/S0.1%)/log(10)] (formula taken from Excel download of WTID database)
 % No longer used: Calculate Pareto coeff from Gini as alpha=(1+1/G)/2; ( http://en.wikipedia.org/wiki/Pareto_distribution#Lorenz_curve_and_Gini_coefficient)
 % Recalculte Lorenz curves, now with 1000 points
-StationaryDist_LorenzCurves=EvalFnOnAgentDist_LorenzCurve_Case1(StationaryDist, Policy, FnsToEvaluateFnIneq, Params,FnsToEvaluateParamNames, n_d, n_a, n_s, d_grid, a_grid, s_grid, [],1000);
-EarningsParetoCoeff=1/((log(StationaryDist_LorenzCurves(1,990))/log(StationaryDist_LorenzCurves(1,999)))/log(10)); %(1+1/EarningsGini)/2;
-IncomeParetoCoeff=1/((log(StationaryDist_LorenzCurves(2,990))/log(StationaryDist_LorenzCurves(2,999)))/log(10)); %(1+1/IncomeGini)/2;
-WealthParetoCoeff=1/((log(StationaryDist_LorenzCurves(3,990))/log(StationaryDist_LorenzCurves(3,999)))/log(10)); %(1+1/WealthGini)/2;
+LorenzCurves=EvalFnOnAgentDist_LorenzCurve_Case1(StationaryDist, Policy, FnsToEvaluateIneq, Params,[], n_d, n_a, n_z, d_grid, a_grid, z_grid, [],1000);
+EarningsParetoCoeff=1/((log(LorenzCurves.Earnings(990))/log(LorenzCurves.Earnings(999)))/log(10)); %(1+1/EarningsGini)/2;
+IncomeParetoCoeff=1/((log(LorenzCurves.Income(990))/log(LorenzCurves.Income(999)))/log(10)); %(1+1/IncomeGini)/2;
+WealthParetoCoeff=1/((log(LorenzCurves.Wealth(990))/log(LorenzCurves.Wealth(999)))/log(10)); %(1+1/WealthGini)/2;
 
 
 %% Display some output about the solution
 
-%plot(cumsum(sum(StationaryDist,2))) %Plot the asset cdf
+% plot(cumsum(sum(StationaryDist,2))) %Plot the asset cdf
 
 fprintf('For parameter values sigma=%.2f, mu=%.2f, rho=%.2f \n', [Params.sigma,Params.mu,Params.rho])
-fprintf('The table 1 elements are sigma=%.4f, rho=%.4f \n',[sqrt(s_variance), s_corr])
+fprintf('The table 1 elements are sigma=%.4f, rho=%.4f \n',[sqrt(z_variance), z_corr])
 
 fprintf('The equilibrium value of the interest rate is r=%.4f \n', p_eqm.r*100)
 fprintf('The equilibrium value of the aggregate savings rate is s=%.4f \n', aggsavingsrate)
-%fprintf('Time required to find the eqm was %.4f seconds \n',findeqmtime)
 

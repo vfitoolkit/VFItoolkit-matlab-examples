@@ -13,8 +13,8 @@ function F=Aiyagari1994_ReturnFn(aprime_val, a_val, s_val,alpha,delta,mu,r)
 
 F=-Inf;
 w=(1-alpha)*((r+delta)/alpha)^(alpha/(alpha-1));
-c=w*s_val+(1+r)*a_val-aprime_val; 
-%c=wl_t+(1+r)a_t-a_{t+1}
+c=w*s_val+(1+r)*a_val-aprime_val; % Budget Constraint
+% c=w l_t+(1+r)a_t-a_{t+1}
 if c>0
     if mu==1
         F=log(c);
