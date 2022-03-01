@@ -29,7 +29,7 @@ subplot(3,2,1); plot(a_grid,d_grid(Policy(1,:,ceil(n_z/2))))
 xlim([a_grid(point7K_ss),a_grid(onepoint3K_ss)]);
 
 % Figure 2 (Fig 4 if UseAlternativeParams=1)
-subplot(3,2,2); plot(a_grid,a_grid(Policy(2,:,ceil(n_z/2)))-(1-delta)*a_grid)
+subplot(3,2,2); plot(a_grid,a_grid(Policy(2,:,ceil(n_z/2)))-(1-Params.delta)*a_grid)
 xlim([a_grid(point7K_ss),a_grid(onepoint3K_ss)]);
 
 
@@ -37,7 +37,7 @@ xlim([a_grid(point7K_ss),a_grid(onepoint3K_ss)]);
 % 1000 simulations of 500 points (I use a 100 point burn in, then do not say if they burn-in or just start in steady-state?)
 NSims=1000;
 simoptions.burnin=100;
-simoptions.simperiods=500;
+simoptions.simoptions.simperiods=500;
 simoptions.parallel=2;
 HistBins=500;
 
@@ -47,7 +47,7 @@ for ii=1:NSims
 end
 
 %Judging from the y-axes of the Figures it appears the 'densities' are calculated as histograms formed by summing across all of the simulations.
-SteadyStateHist=sum(StationaryDist,3)*simoptions.simperiods; %Multiply by SimPeriods as otherwise they are the actual densities being summed
+SteadyStateHist=sum(StationaryDist,3)*simoptions.simoptions.simperiods; %Multiply by simoptions.simperiods as otherwise they are the actual densities being summed
 CapitalSteadyStateHist=zeros(n_a,1,'gpuArray');
 OutputSteadyStateHist=zeros(HistBins,1,'gpuArray');
 ConsumptionSteadyStateHist=zeros(HistBins,1,'gpuArray');
@@ -56,8 +56,8 @@ ConsumptionSteadyStateValues=zeros(n_a,n_z,'gpuArray');
 for a_c=1:n_a
     for z_c=1:n_z
         CapitalSteadyStateHist(Policy(2,a_c,z_c))=CapitalSteadyStateHist(Policy(2,a_c,z_c))+SteadyStateHist(a_c,z_c);
-        OutputSteadyStateValues(a_c,z_c)=exp(z_grid(z_c))*(a_grid(a_c)^alpha)*(d_grid(Policy(1,a_c,z_c))^(1-alpha));
-        ConsumptionSteadyStateValues(a_c,z_c)=exp(z_grid(z_c))*(a_grid(a_c)^alpha)*(d_grid(Policy(1,a_c,z_c))^(1-alpha))+(1-delta)*a_grid(a_c)-a_grid(Policy(2,a_c,z_c));
+        OutputSteadyStateValues(a_c,z_c)=exp(z_grid(z_c))*(a_grid(a_c)^Params.alpha)*(d_grid(Policy(1,a_c,z_c))^(1-Params.alpha));
+        ConsumptionSteadyStateValues(a_c,z_c)=exp(z_grid(z_c))*(a_grid(a_c)^Params.alpha)*(d_grid(Policy(1,a_c,z_c))^(1-Params.alpha))+(1-Params.delta)*a_grid(a_c)-a_grid(Policy(2,a_c,z_c));
     end
 end
 minOutput=min(min(OutputSteadyStateValues));
@@ -114,62 +114,47 @@ subplot(3,2,5); plot(ConsumptionGrid, ConsumptionSteadyStateHist)
 % fy_t is the vector (MU_c; z_t)
 % Et_phi is a vector ( ; rho*z_{t-1}+e)
 
-%NOTE: I use different simulations for the chi-squared (here the time
-%dimension is necessary, previously it was not).
-% First we generate a time series of indexes for the a & z variables (of
-% size (periods,num_a_vars+num_z_vars))
-simoptions.seedpoint=[ceil(n_a/2),ceil(n_z/2)];
-simoptions.polindorval=PolIndOrVal;
-TimeSeriesIndexesSims=zeros(2,500,NSims);
-for ii=1:NSims
-    TimeSeriesIndexesSims(:,:,ii)=SimTimeSeriesIndexes_Case1(Policy,n_d,n_a,n_z,pi_z,simoptions);
-end
+%NOTE: I use different simulations for the chi-squared (here the time dimension is necessary, previously it was not).
 
-% %Define the functions which we wish to create time series for (from the TimeSeriesIndexes)
-% TimeSeriesFn_1 = @(d_val,d_ind,aprime_val,aprime_ind,a_val,a_ind,z_val,z_ind) a_val; %Capital Stock
-% TimeSeriesFn_2 = @(d_val,d_ind,aprime_val,aprime_ind,a_val,a_ind,z_val,z_ind) z_val; %Investment
-% TimeSeriesFn={TimeSeriesFn_1, TimeSeriesFn_2};
-% TimeSeries=TimeSeries_Case1(TimeSeriesIndexes,Policy, TimeSeriesFn, n_d, n_a, n_z, d_grid, a_grid, z_grid);
+% Define the functions which we wish to create time series for (from the TimeSeriesIndexes)
+FnsToEvaluate.K = @(d,aprime,a,z) a; % Capital Stock
+FnsToEvaluate.I = @(d,aprime,a,z,delta) aprime-(1-delta)*a; % Investment
+FnsToEvaluate.z = @(d,aprime,a,z) z; % Productivity shock
+FnsToEvaluate.aprime = @(d,aprime,a,z) aprime; % Productivity shock
+FnsToEvaluate.l = @(d,aprime,a,z) d; % Productivity shock
 
 m=2; q=1;
 DenHaanMarcetStat=zeros(NSims,1);
 B_T=zeros(m*q,NSims);
 A_T=zeros(m*q,m*q,NSims);
 for ii=1:NSims
-    TimeSeriesIndexes=TimeSeriesIndexesSims(:,:,ii);
+    TimeSeries=TimeSeries_Case1(Policy, FnsToEvaluate, Params, n_d, n_a, n_z, d_grid, a_grid, z_grid,pi_z,simoptions);
 
+    fy_t=zeros(m,simoptions.simperiods-2);
+    E_t_phi=zeros(m,simoptions.simperiods-2);
+    u_tplus1=zeros(m,simoptions.simperiods-2);
+    
+    hx_t=ones(q,simoptions.simperiods-2); % q-dimensional
 
+    B_t=zeros(m*q,simoptions.simperiods-2);
+    A_t=zeros(m*q,m*q,simoptions.simperiods-2);
     
-    fy_t=zeros(m,SimPeriods-2);
-    E_t_phi=zeros(m,SimPeriods-2);
-    u_tplus1=zeros(m,SimPeriods-2);
-    
-    hx_t=ones(q,SimPeriods-2); % q-dimensional
-
-    B_t=zeros(m*q,SimPeriods-2);
-    A_t=zeros(m*q,m*q,SimPeriods-2);
-    
-    for t=1:SimPeriods-2
-        a_t_c=TimeSeriesIndexes(1,t);
-        a_t=a_grid(a_t_c); %=TimeSeries(t,1)
-        z_t_c=TimeSeriesIndexes(2,t);
-        z_t=z_grid(z_t_c);
-        a_tplus1_c=TimeSeriesIndexes(1,t+1); %=Policy(2,a_t_c,z_t_c);
-        a_tplus1=a_grid(a_tplus1_c);
-        l_t=d_grid(Policy(1,a_t_c,z_t_c));
-        c_t=exp(z_t)*(a_t^alpha)*(l_t^(1-alpha))+(1-delta)*a_t-a_tplus1;
+    for t=1:simoptions.simperiods-2
+        a_t=TimeSeries.K(t);
+        z_t=TimeSeries.z(t);
+        a_tplus1=TimeSeries.aprime(t);
+        l_t=TimeSeries.l(t);
+        c_t=exp(z_t)*(a_t^Params.alpha)*(l_t^(1-Params.alpha))+(1-Params.delta)*a_t-a_tplus1;
         
-        z_tplus1_c=TimeSeriesIndexes(2,t+1);
-        z_tplus1=z_grid(z_tplus1_c);
-        a_tplus2_c=TimeSeriesIndexes(1,t+2); %=Policy(2,a_tplus1_c,zprime_c);
-        a_tplus2=a_grid(a_tplus2_c);
-        l_tplus1=d_grid(Policy(1,a_tplus1_c,z_tplus1_c));
-        c_tplus1=exp(z_tplus1)*(a_tplus1^alpha)*(l_tplus1^(1-alpha))+(1-delta)*a_tplus1-a_tplus2;
+        z_tplus1=TimeSeries.l(t+1);
+        a_tplus2=TimeSeries.aprime(t+1);
+        l_tplus1=TimeSeries.l(t+1);
+        c_tplus1=exp(z_tplus1)*(a_tplus1^Params.alpha)*(l_tplus1^(1-Params.alpha))+(1-Params.delta)*a_tplus1-a_tplus2;
         
-        MPK_t=alpha*exp(z_t)*(a_t^(alpha-1))*(l_t^(1-alpha));
+        MPK_t=Params.alpha*exp(z_t)*(a_t^(Params.alpha-1))*(l_t^(1-Params.alpha));
         
-        fy_t(:,t)=[theta*(c_t^(theta*(1-tau)-1))*((1-l_t)^((1-theta)*(1-tau))); rho*z_t];
-        E_t_phi(:,t)=[beta*(c_tplus1^(theta*(1-tau)-1))*((1-l_tplus1)^((1-theta)*(1-tau)))*(1+MPK_t-delta); z_tplus1];
+        fy_t(:,t)=[Params.theta*(c_t^(Params.theta*(1-Params.tau)-1))*((1-l_t)^((1-Params.theta)*(1-Params.tau))); Params.rho*z_t];
+        E_t_phi(:,t)=[Params.beta*(c_tplus1^(Params.theta*(1-Params.tau)-1))*((1-l_tplus1)^((1-Params.theta)*(1-Params.tau)))*(1+MPK_t-Params.delta); z_tplus1];
         u_tplus1(:,t)=fy_t(:,t)-E_t_phi(:,t); % m-dimensional
         
         %hx_t(:,t)
@@ -181,16 +166,20 @@ for ii=1:NSims
     
     
     %B
-    B_T(:,ii)=(1/(SimPeriods-2))*sum(B_t,2);
+    B_T(:,ii)=(1/(simoptions.simperiods-2))*sum(B_t,2);
     %A
-    A_T(:,:,ii)=(1/(SimPeriods-2))*sum(A_t,3);
+    A_T(:,:,ii)=(1/(simoptions.simperiods-2))*sum(A_t,3);
     
-    DenHaanMarcetStat(ii)=(SimPeriods-2)*B_T(:,ii)'*(A_T(:,:,ii)^(-1))*B_T(:,ii);
+    DenHaanMarcetStat(ii)=(simoptions.simperiods-2)*B_T(:,ii)'*(A_T(:,:,ii)^(-1))*B_T(:,ii);
     
 end
 
+% Matlab has decided to make DenHaanMarcetStat complex, but all the
+% imaginary parts are 0, so just
+DenHaanMarcetStat=real(DenHaanMarcetStat);
+
 %Having calculated the DenHaan-Marcet stats, we now want to look at the 
-Chi2cdfvalues=chi2cdf(DenHaanMarcetStat/(SimPeriods-2),1);
+Chi2cdfvalues=chi2cdf(DenHaanMarcetStat/(simoptions.simperiods-2),1);
 MoreThan5Percent=sum(Chi2cdfvalues>0.95);
 LessThan5Percent=sum(Chi2cdfvalues<0.05);
 
@@ -211,18 +200,18 @@ for a_c=1:n_a
         a_tplus1_c=Policy(2,a_c,z_c);
         a_tplus1=a_grid(a_tplus1_c);
         l_t=d_grid(Policy(1,a_c,z_c));
-        c_t=exp(z_grid(z_c))*(a_t^alpha)*(l_t^(1-alpha))+(1-delta)*a_t-a_tplus1;
+        c_t=exp(z_grid(z_c))*(a_t^Params.alpha)*(l_t^(1-Params.alpha))+(1-Params.delta)*a_t-a_tplus1;
         
         for zprime_c=1:n_z
             a_tplus2_c=Policy(2,a_tplus1_c,zprime_c);
             a_tplus2=a_grid(a_tplus2_c);
             l_tplus1=d_grid(Policy(1,a_tplus1_c,zprime_c));
-            c_tplus1=exp(z_grid(zprime_c))*(a_tplus1^alpha)*(l_tplus1^(1-alpha))+(1-delta)*a_tplus1-a_tplus2;
-            u_c_tplus1(zprime_c)=theta*(c_tplus1^(theta*(1-tau)-1))*((1-l_tplus1)^((1-theta)*(1-tau)));
-            R(zprime_c)=1+alpha*exp(z_grid(zprime_c))*(a_tplus1^(alpha-1))*(l_tplus1^(1-alpha))-delta;
+            c_tplus1=exp(z_grid(zprime_c))*(a_tplus1^Params.alpha)*(l_tplus1^(1-Params.alpha))+(1-Params.delta)*a_tplus1-a_tplus2;
+            u_c_tplus1(zprime_c)=Params.theta*(c_tplus1^(Params.theta*(1-Params.tau)-1))*((1-l_tplus1)^((1-Params.theta)*(1-Params.tau)));
+            R(zprime_c)=1+Params.alpha*exp(z_grid(zprime_c))*(a_tplus1^(Params.alpha-1))*(l_tplus1^(1-Params.alpha))-Params.delta;
         end
         E_t=(u_c_tplus1.*R)*pi_z(z_c,:)';
-        EulerEqnErrors(a_c,z_c)=1-((beta*E_t/(theta*(1-l_t)^((1-theta)*(1-tau))))^(1/(theta*(1-tau)-1)))/c_t;
+        EulerEqnErrors(a_c,z_c)=1-((Params.beta*E_t/(Params.theta*(1-l_t)^((1-Params.theta)*(1-Params.tau))))^(1/(Params.theta*(1-Params.tau)-1)))/c_t;
     end
 end
 
@@ -233,7 +222,7 @@ ylim([-10,-1]); xlim([a_grid(point7K_ss),a_grid(onepoint3K_ss)]);
 
 % Table 5 (Table 6 if UseAlternativeParams=1)
 AbsMaxEE=max(max(log10(abs(EulerEqnErrors(point7K_ss:onepoint3K_ss,zlow:zhigh)))));
-IntegEE=log10(abs(sum(sum(EulerEqnErrors.*(SteadyStateHist/(NSims*SimPeriods))))));
+IntegEE=log10(abs(sum(sum(EulerEqnErrors.*(SteadyStateHist/(NSims*simoptions.simperiods))))));
 fprintf('Table 5: Euler errors (Abs(log10)) \n')
 fprintf('            Absolute max Euler Error     Integral of the Euler Errors \n')
 fprintf('Value fn:   %8.2f                        %8.6f \n', [AbsMaxEE, IntegEE])

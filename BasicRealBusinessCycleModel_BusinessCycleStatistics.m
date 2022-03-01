@@ -6,22 +6,20 @@ disp('Running BasicRealBusinessCycleModel_BusinessCycleStatistics.m')
 BasicRealBusinessCycleModel
 
 %% We will generate some simulated data and then use this to calculate the standard business cycle statistics
-% First we generate a time series of indexes for the d,a & z variables (of
-% size (num_d_vars+num_a_vars+num_a_vars+num_z_vars,periods)) (the first
-% num_a_vars is for aprime).
-simoptions.seedpoint=[ceil(n_a/2),ceil(n_z/2)];
+% Set some options, the following are actually just the defaults anyway
 simoptions.burnin=1000;
-simoptions.simperiods=1000;
-TimeSeriesIndexes=SimTimeSeriesIndexes_Case1(Policy,n_d,n_a,n_z,pi_z,simoptions);
+simoptions.simperiods=10000;
 
-%Define the functions which we wish to create time series for (from the TimeSeriesIndexes)
-TimeSeriesFn_1 = @(d_val,aprime_val,a_val,z_val) a_val; %Capital Stock
-TimeSeriesFn_2 = @(d_val,aprime_val,a_val,z_val) aprime_val-(1-delta)*a_val; %Investment
-TimeSeriesFn={TimeSeriesFn_1, TimeSeriesFn_2};
+% Define the functions which we wish to create time series for (from the TimeSeriesIndexes)
+FnsToEvaluate.K = @(d,aprime,a,z) a; %Capital Stock
+FnsToEvaluate.I = @(d,aprime,a,z,delta) aprime-(1-delta)*a; %Investment
+% Note that the inputs are the states (in order) followed by any other parameter values
 
-TimeSeries=TimeSeries_Case1(TimeSeriesIndexes,Policy, TimeSeriesFn, n_d, n_a, n_z, d_grid, a_grid, z_grid,simoptions);
+TimeSeries=TimeSeries_Case1(Policy, FnsToEvaluate, Params, n_d, n_a, n_z, d_grid, a_grid, z_grid,pi_z,simoptions);
 
-StdBusCycleStats=[mean(TimeSeries(1,:)),mean(TimeSeries(2,:)); var(TimeSeries(1,:)),var(TimeSeries(2,:))]
+StdBusCycleStats=[mean(TimeSeries.K),mean(TimeSeries.I); var(TimeSeries.K),var(TimeSeries.I)]
 
-
-
+%% We could look at the simulated time series directly
+figure(2)
+plot(TimeSeries.K)
+title('Simulated time series for aggregate physical capital (K)')
