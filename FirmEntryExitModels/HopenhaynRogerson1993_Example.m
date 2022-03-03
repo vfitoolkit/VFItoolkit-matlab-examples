@@ -27,8 +27,8 @@ Params.sigma_epsilon=sqrt((1-Params.rho)*((Params.sigma_logz)^2));
 Params.a=0.078; % Hopenhayn & Rogerson (1993) do not report, but Martin Flodén figures out the following (pg 5): http://martinfloden.net/files/macrolab.pdf
 
 n_z=20; % I here call z, what Hopenhayn & Rogerson (1993) call s. The choice of n_z=20 follows them.
-Params.q=4; % Hopenhayn & Rogerson (1993) do not report (based on Table 4 is seems something around q=4 is used, otherwise don't get values of z anywhere near as high as 27.3. (HR1993 have typo and call the column 'log(s)' when it should be 's') 
-[z_grid, pi_z]=TauchenMethod(Params.a,Params.sigma_epsilon^2,Params.rho,n_z,Params.q); %[states, transmatrix]=TauchenMethod_Param(mew,sigmasq,rho,znum,q), transmatix is (z,zprime)
+Tauchen_q=4; % Hopenhayn & Rogerson (1993) do not report (based on Table 4 is seems something around q=4 is used, otherwise don't get values of z anywhere near as high as 27.3. (HR1993 have typo and call the column 'log(s)' when it should be 's') 
+[z_grid,pi_z]=discretizeAR1_Tauchen(Params.a,Params.rho,Params.sigma_epsilon,n_z,Tauchen_q);
 z_grid=exp(z_grid);
 
 %%
@@ -36,8 +36,6 @@ n_a=401; % Hopenhayn & Rogerson (1993) use 250, this is intended as an approxima
 a_grid=[linspace(0,100,101),((logspace(0,pi,n_a-101-1)-1)/(pi-1))*(5000-101)+101,10^6]'; % One less point in standard grid, instead add the 10^6 point to keep track of the new entrants.
 n_d=0; % None.
 d_grid=[];
-
-% plot(1:1:n_a-1,a_grid(1:end-1))
 
 %% Value Function Problem (with endogenous exit)
 % Entry is irrelevant to the value function problem. Exit is relevant, and treated differently based on whether it is endogenous or exogenous.
@@ -48,20 +46,19 @@ DiscountFactorParamNames={'beta'};
 vfoptions.endogenousexit=1;
 % We also need to create 'vfoptions.ReturnToExitFn' (and 'vfoptions.ReturnToExitFnParamNames'), as below.
 
-ReturnFn=@(aprime_val, a_val, z_val, p, alpha, tau, cf) HopenhaynRogerson1993_ReturnFn(aprime_val, a_val, z_val, p, alpha, tau, cf);
-ReturnFnParamNames={'p', 'alpha', 'tau', 'cf'}; %It is important that these are in same order as they appear in 'Hopenhayn1992_ReturnFn'
+ReturnFn=@(aprime,a,z,p,alpha,tau,cf) HopenhaynRogerson1993_ReturnFn(aprime, a, z, p, alpha, tau, cf);
 
 % For endogenous exit, also need to define the 'return to exit'.
-vfoptions.ReturnToExitFn=@(a_val, z_val,tau) -tau*a_val*(a_val~=10^6); % the exit cost is the cost of firing all remaining employees (pg 919 of Hopenhayn & Rogerson, 1993).
+vfoptions.ReturnToExitFn=@(a,z,tau) -tau*a*(a~=10^6); % the exit cost is the cost of firing all remaining employees (pg 919 of Hopenhayn & Rogerson, 1993).
+% The inputs to vfoptions.ReturnToExitFn are (a,z) followed by any parameters
 % Remark: if a more complex 'return to exit' was desired it could be
 % created in much the same way as the ReturnFn is created, but depends only
-% on (a,z) variables (and any parameters passed using ReturnToExitFnParamNames).
+% on (a,z) variables and any parameters named as additional inputs.
 % The following commented out line provides an 'example' of how to do this
-% ReturnToExitFn=@(a_val, s_val) HopenhaynRogerson1993_ReturnToExitFn(a_val, s_val);
-vfoptions.ReturnToExitFnParamNames={'tau'}; %It is important that these are in same order as they appear in 'Hopenhayn1992_ReturnToExitFn'
+% ReturnToExitFn=@(a, s) HopenhaynRogerson1993_ReturnToExitFn(a, s);
 
 % Check that everything is working so far by solving the value function
-[V,Policy,ExitPolicy]=ValueFnIter_Case1(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames, vfoptions);
+[V,Policy,ExitPolicy]=ValueFnIter_Case1(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
 
 % When tau=0 there is a cut-off value of z below which all firms exit, and which is independent of n.
 % This can be easily seen graphing the whole of the ExitPolicy, which takes
@@ -85,7 +82,6 @@ simoptions.endogenousexit=1;
 
 % Distribution of new agents:
 EntryExitParamNames.DistOfNewAgents={'upsilon'};
-
 
 % Need to put the new entrants into the 'special value' used to indicate new entrants so they can receive special treatment as per footnote.
 Params.upsilon=[zeros(n_a-1,1);1]*[ones(1,floor(0.65*n_z)),zeros(1,n_z-floor(0.65*n_z))]; % 'special value' is last point in a_grid
@@ -144,32 +140,22 @@ title('Stationary Distribution over lagged employment (sum/integral over z)')
 %Use the toolkit to find the equilibrium prices
 GEPriceParamNames={'ce','Ne'};
 
-FnsToEvaluateParamNames(1).Names={'alpha'};%,'p'};
 % Note: With entry-exit the mass of the distribution of agents often
 % matters. So it becomes an extra input arguement in all functions to be evaluated.
-% FnsToEvaluateFn_1 = @(aprime_val,a_val,z_val,agentmass,alpha,p) p*z_val*(aprime_val^alpha); % Total output
-FnsToEvaluateFn_1 = @(aprime_val,a_val,z_val,agentmass,alpha) z_val*(aprime_val^alpha); % Real output
-FnsToEvaluate={FnsToEvaluateFn_1};
+FnsToEvaluate.Y = @(aprime,a,z,agentmass,alpha) z*(aprime^alpha); % Real output
 
 % Just to test: (note, is same command as usual, just need to include the optional extra inputs 'simoptions' and 'EntryExitParamNames' which contains all the needed info about entry/exit)
-AggVars=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_z, d_grid, a_grid, z_grid, [], simoptions,EntryExitParamNames);
+AggVars=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, [], simoptions,EntryExitParamNames);
 
 % The general equilibrium condition is that the EV^e-ce=0.
 % This does not fit standard format for general equilibrium conditions.
 heteroagentoptions.specialgeneqmcondn={0,'entry'};
 % Certain kinds of general equilibrium conditions that are non-standard can
 % be used via heteroagentoptions.specialgeneqmcondn
-GeneralEqmEqnParamNames(1).Names={'p','A'};
 % SHOULD THE FOLLOWING BE MODIFIED TO C=Y-ce*Ne? (currently AggVars is Y, while condition comes from Rep HH and is on C; so currently just C=Y)
-GeneralEqmEqn_1 = @(AggVars,GEprices,p,A) A/AggVars-p; %The requirement that the price is determined by the demand eqn (or equivalently, can think of this as goods market clearance). You can derive it from FOCs of standard consumption-leisure problem [it is the -U_c/U_N=p/w condition you often see in household problems; remember normalize w=1]: max_{c,N} log(c)-AN s.t. pC=wN+T
-GeneralEqmEqnParamNames(2).Names={'p'};
-GeneralEqmEqn_Entry = @(EValueFn,GEprices,p) EValueFn-p*GEprices(1); % Free entry conditions (expected returns equal zero in eqm); note that the first 'General eqm price' is ce, the fixed-cost of entry.
-
-% The entry condition looks slightly different to more standard @(EValueFn,p,params)
-% This is because 'p' is the name of a parameter, and so have used 'GEprices'
-% instead of my usual 'p' to refer to the general equilibrium prices (here 'ce' and 'Ne')
-GeneralEqmEqns={GeneralEqmEqn_1, GeneralEqmEqn_Entry};
-% Note that GeneralEqmEqn_Entry needed to be pointed out as special because
+GeneralEqmEqns.RealOutput = @(Y,p,A) A/Y-p; %The requirement that the price is determined by the demand eqn (or equivalently, can think of this as goods market clearance). You can derive it from FOCs of standard consumption-leisure problem [it is the -U_c/U_N=p/w condition you often see in household problems; remember normalize w=1]: max_{c,N} log(c)-AN s.t. pC=wN+T
+GeneralEqmEqns.Entry = @(EValueFn,ce,p) EValueFn-p*ce; % Free entry conditions (expected returns equal zero in eqm); note that the first 'General eqm price' is ce, the fixed-cost of entry.
+% Note that GeneralEqmEqn.Entry needed to be pointed out as special because
 % it depends on the distribution of entrants and not the distribution of
 % existing agents (all standard general eqm conditions involve the later).
 
@@ -178,14 +164,14 @@ n_p=0;
 disp('Calculating price vector corresponding to the stationary eqm')
 % tic;
 % NOTE: EntryExitParamNames has to be passed as an additional input compared to the standard case.
-[p_eqm,p_eqm_index, GeneralEqmCondition]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_z, n_p, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, GEPriceParamNames,heteroagentoptions, simoptions, vfoptions, EntryExitParamNames);
+[p_eqm,p_eqm_index, GeneralEqmCondition]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_z, n_p, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions, simoptions, vfoptions, EntryExitParamNames);
 % findeqmtime=toc
 
 Params.ce=p_eqm.ce;
 Params.Ne=p_eqm.Ne;
 
 %% Calculate some relevant things in eqm
-[V,Policy,ExitPolicy]=ValueFnIter_Case1(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames, vfoptions);
+[V,Policy,ExitPolicy]=ValueFnIter_Case1(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
 Params.zeta=1-ExitPolicy;
 StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_z,pi_z, simoptions, Params, EntryExitParamNames);
 
@@ -195,18 +181,16 @@ StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_z,pi_z, simoptions, Params,
 
 %% Now that the stationary equilibrium has been found, replicate Table 2
 
-FnsToEvaluateParamNames(1).Names={};
-FnsToEvaluateFn_Emp = @(aprime_val,a_val,z_val,AgentDistMass) aprime_val; % Employment
-FnsToEvaluateParamNames(2).Names={};
-FnsToEvaluateFn_Hiring = @(aprime_val,a_val,z_val,AgentDistMass) (aprime_val-a_val*(a_val~=10^6))*(aprime_val>a_val*(a_val~=10^6)); % Hiring (need to add the 'firm entry' which involves hiring a single worker)
-FnsToEvaluateParamNames(3).Names={};
-FnsToEvaluateFn_Firing = @(aprime_val,a_val,z_val,AgentDistMass) -(aprime_val-a_val*(a_val~=10^6))*(aprime_val<a_val*(a_val~=10^6)); % Firing (need to add the 'firm exits' which involve firing all remaing workers)
-FnsToEvaluate={FnsToEvaluateFn_Emp, FnsToEvaluateFn_Hiring, FnsToEvaluateFn_Firing};
+FnsToEvaluate2.Employment = @(aprime,a,z) aprime; % Employment
+FnsToEvaluate2.Hiring = @(aprime,a,z) (aprime-a*(a~=10^6))*(aprime>a*(a~=10^6)); % Hiring (need to add the 'firm entry' which involves hiring a single worker)
+FnsToEvaluate2.Firing = @(aprime,a,z) -(aprime-a*(a~=10^6))*(aprime<a*(a~=10^6)); % Firing (need to add the 'firm exits' which involve firing all remaing workers)
+% If you want to use agentmass it must be referred to by precisely that
+% name and appear immediately after z as an input (before any other parameters)
 
 % We will want the aggregate values of these. 
-AggValues=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_z, d_grid, a_grid, z_grid, [], simoptions,EntryExitParamNames);
+AggValues=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate2, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, [], simoptions,EntryExitParamNames);
 % For much of Panel B we just need the pdf of the relevant measure (employment, hiring, firing)
-ProbDensityFns=EvalFnOnAgentDist_pdf_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_z, d_grid, a_grid, z_grid, [], simoptions,EntryExitParamNames);
+ProbDensityFns=EvalFnOnAgentDist_pdf_Case1(StationaryDist, Policy, FnsToEvaluate2, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, [], simoptions,EntryExitParamNames);
 % We need a simulated panel based on whole distributions (for calculating
 % variance of growth rates and serial correlation in log(n); for survivors).
 % Note that because of these two moments we want to calculate it makes more
@@ -215,19 +199,19 @@ ProbDensityFns=EvalFnOnAgentDist_pdf_Case1(StationaryDist, Policy, FnsToEvaluate
 simoptions.entryinpanel=0; % Don't want entry in this panel data simulation (we are just interested in 'survivors')
 simoptions.simperiods=2;
 simoptions.numbersims=10^4;
-SimPanel=SimPanelValues_Case1(StationaryDist,Policy,FnsToEvaluate,FnsToEvaluateParamNames,Params,n_d,n_a,n_z,d_grid,a_grid,z_grid,pi_z, simoptions, EntryExitParamNames);
-Survive_indicator=~isnan(shiftdim((SimPanel(2,2,:)),1));
-SimPanel_Survivors=SimPanel(:,:,Survive_indicator);
-GrowthRateEmploy=(SimPanel_Survivors(1,2,:)-SimPanel_Survivors(1,1,:))./SimPanel_Survivors(1,1,:);
+SimPanel=SimPanelValues_Case1(StationaryDist,Policy,FnsToEvaluate2,[],Params,n_d,n_a,n_z,d_grid,a_grid,z_grid,pi_z, simoptions, EntryExitParamNames);
+Survive_indicator=~isnan((SimPanel.Hiring(2,:)));
+SimPanel_Survivors.Employment=SimPanel.Employment(:,Survive_indicator);
+GrowthRateEmploy=(SimPanel_Survivors.Employment(2,:)-SimPanel_Survivors.Employment(1,:))./SimPanel_Survivors.Employment(1,:);
 VarianceOfGrowthRate_survivors=var(GrowthRateEmploy);
-SerialCorrelationLogn_survivors=corr(log(shiftdim(SimPanel_Survivors(1,2,:),2)),log(shiftdim(SimPanel_Survivors(1,1,:),2)));
+SerialCorrelationLogn_survivors=corr(log(shiftdim(SimPanel_Survivors.Employment(2,:),2)),log(shiftdim(SimPanel_Survivors.Employment(1,:),2)));
 % We need a simulated panel based on new entrants for some (e.g., for stats by cohort)
 simoptions.entryinpanel=0; % Don't want further entry in this panel data simulation
 simoptions.simperiods=20; % We anyway only need 10 for the stats being reported
 simoptions.numbersims=10^4; % Default is 1000, this was not enough to get stable/smooth estimate of 'hazard rates by cohort'
 EntrantDist.pdf=Params.upsilon;
 EntrantDist.mass=Params.Ne;
-SimPanel_Entrants=SimPanelValues_Case1(EntrantDist,Policy,FnsToEvaluate,FnsToEvaluateParamNames,Params,n_d,n_a,n_z,d_grid,a_grid,z_grid,pi_z, simoptions, EntryExitParamNames);
+SimPanel_Entrants=SimPanelValues_Case1(EntrantDist,Policy,FnsToEvaluate2,[],Params,n_d,n_a,n_z,d_grid,a_grid,z_grid,pi_z, simoptions, EntryExitParamNames);
 
 % plot(sort(GrowthRateEmploy(:)))
 
@@ -244,20 +228,22 @@ for a_c=1:n_a
 end
 
 StationaryDist.pdf=gather(StationaryDist.pdf); % Easiest way of doing following for case when gpu was used.
-ProbDensityFns=gather(ProbDensityFns);
+ProbDensityFns.Employment=gather(ProbDensityFns.Employment);
+ProbDensityFns.Hiring=gather(ProbDensityFns.Hiring);
+ProbDensityFns.Firing=gather(ProbDensityFns.Firing);
 
 % Start with Panel A.
 % Average Firm Size (i.e., Average number of employees)
-AvgFirmSize=AggValues(1)/StationaryDist.mass;
+AvgFirmSize=AggValues.Employment.Aggregate/StationaryDist.mass;
 % Exit rate of Firms
 MassOfExitingFirms=sum(sum(StationaryDist.pdf(logical(ExitPolicy))))*StationaryDist.mass;
 ExitRateOfFirms=MassOfExitingFirms/StationaryDist.mass;
 % In stationary eqm, firing must equal hiring, so can use either for
 % turnover. (might need to adjust for entry???)
-TurnoverRateOfJobs=AggValues(2)/AggValues(1); % the "/StationaryDist.mass" cancels top and bottom
+TurnoverRateOfJobs=AggValues.Hiring.Aggregate/AggValues.Employment.Aggregate; % the "/StationaryDist.mass" cancels top and bottom
 % Fraction of hiring by new firms
 TotalHiringByNewFirms=Params.Ne*sum(sum(Params.(EntryExitParamNames.DistOfNewAgents{1}).*EmploymentDecision)); %Note that all employment by new firms represents hiring (as they enter with zero employees).
-FractionHiringByNewFirms=TotalHiringByNewFirms/AggValues(1);
+FractionHiringByNewFirms=TotalHiringByNewFirms/AggValues.Employment.Aggregate;
 % Average size of new firm
 % This is awkward as Hopenhayn & Rogerson (1993) explictly state that new
 % firms have zero employees in their first period of existence. Presumably
@@ -286,39 +272,35 @@ FourthPartition=logical((EmploymentDecision>=500));
 
 % Fraction of firm in each partition (conditional on not exiting)
 FractionOfFirmsPerPartition=zeros(4,1);
-pdfoffirms=StationaryDist.pdf;
-FractionOfFirmsPerPartition(1)=sum(pdfoffirms(FirstPartition));
-FractionOfFirmsPerPartition(2)=sum(pdfoffirms(SecondPartition));
-FractionOfFirmsPerPartition(3)=sum(pdfoffirms(ThirdPartition));
-FractionOfFirmsPerPartition(4)=sum(pdfoffirms(FourthPartition));
+FractionOfFirmsPerPartition(1)=sum(StationaryDist.pdf(FirstPartition));
+FractionOfFirmsPerPartition(2)=sum(StationaryDist.pdf(SecondPartition));
+FractionOfFirmsPerPartition(3)=sum(StationaryDist.pdf(ThirdPartition));
+FractionOfFirmsPerPartition(4)=sum(StationaryDist.pdf(FourthPartition));
 
 % Fraction of employment in each partition
 FractionOfEmploymentPerPartition=zeros(4,1);
-pdfofemploy=shiftdim(ProbDensityFns(1,:,:),1);
 pdfofemploy2=(StationaryDist.pdf.*EmploymentDecision)/sum(sum(StationaryDist.pdf.*EmploymentDecision));
-FractionOfEmploymentPerPartition(1)=sum(pdfofemploy(FirstPartition));
-FractionOfEmploymentPerPartition(2)=sum(pdfofemploy(SecondPartition));
-FractionOfEmploymentPerPartition(3)=sum(pdfofemploy(ThirdPartition));
-FractionOfEmploymentPerPartition(4)=sum(pdfofemploy(FourthPartition));
+FractionOfEmploymentPerPartition(1)=sum(ProbDensityFns.Employment(FirstPartition));
+FractionOfEmploymentPerPartition(2)=sum(ProbDensityFns.Employment(SecondPartition));
+FractionOfEmploymentPerPartition(3)=sum(ProbDensityFns.Employment(ThirdPartition));
+FractionOfEmploymentPerPartition(4)=sum(ProbDensityFns.Employment(FourthPartition));
 % Fraction of hiring in each partition
 FractionOfHiringPerPartition=zeros(4,1);
-pdfofhiring=shiftdim(ProbDensityFns(2,:,:),1);
-FractionOfHiringPerPartition(1)=sum(pdfofhiring(FirstPartition));
-FractionOfHiringPerPartition(2)=sum(pdfofhiring(SecondPartition));
-FractionOfHiringPerPartition(3)=sum(pdfofhiring(ThirdPartition));
-FractionOfHiringPerPartition(4)=sum(pdfofhiring(FourthPartition));
+FractionOfHiringPerPartition(1)=sum(ProbDensityFns.Hiring(FirstPartition));
+FractionOfHiringPerPartition(2)=sum(ProbDensityFns.Hiring(SecondPartition));
+FractionOfHiringPerPartition(3)=sum(ProbDensityFns.Hiring(ThirdPartition));
+FractionOfHiringPerPartition(4)=sum(ProbDensityFns.Hiring(FourthPartition));
 % Fraction of firing in each partition
 FractionOfFiringPerPartition=zeros(4,1);
-pdfoffiring=shiftdim(ProbDensityFns(3,:,:),1);
-FractionOfFiringPerPartition(1)=sum(pdfoffiring(FirstPartition));
-FractionOfFiringPerPartition(2)=sum(pdfoffiring(SecondPartition));
-FractionOfFiringPerPartition(3)=sum(pdfoffiring(ThirdPartition));
-FractionOfFiringPerPartition(4)=sum(pdfoffiring(FourthPartition));
+FractionOfFiringPerPartition(1)=sum(ProbDensityFns.Firing(FirstPartition));
+FractionOfFiringPerPartition(2)=sum(ProbDensityFns.Firing(SecondPartition));
+FractionOfFiringPerPartition(3)=sum(ProbDensityFns.Firing(ThirdPartition));
+FractionOfFiringPerPartition(4)=sum(ProbDensityFns.Firing(FourthPartition));
 
 % Firms size by cohort: the current employment size of a firm is 'aprime'.
-FractionOfFirmsPerPartition_CohortPeriod=zeros(4,size(SimPanel_Entrants,2));
-for t=1:size(SimPanel_Entrants,2)
-    temp=SimPanel_Entrants(1,t,:); % First variable in panel is 'aprime', which is the number of employees this period.
+FractionOfFirmsPerPartition_CohortPeriod=zeros(4,size(SimPanel_Entrants.Employment,1));
+for t=1:size(SimPanel_Entrants.Employment,1)
+    temp=SimPanel_Entrants.Employment(t,:);
     temp=temp(~isnan(temp)); % For obvious reasons, calculation has to be done is conditional on survival (else won't sum to one)
     temp=temp(temp~=0); % Hopenhayn & Rogerson do this conditional on not choosing to exit (clear from fact the columns add to one in their numbers)
     NumberOfFirmsStillAlive_CurrentCohort=numel(temp);
@@ -329,7 +311,7 @@ for t=1:size(SimPanel_Entrants,2)
 end
 % Hazard rates by cohort: Looking at SimPanel_Entrants a firm that exits
 % will be represented by a number followed by a 'nan'.
-NumberFirmsStillAlive=[size(SimPanel_Entrants,3),sum(~isnan(shiftdim(SimPanel_Entrants(1,:,:),1)),2)'];
+NumberFirmsStillAlive=[size(SimPanel_Entrants,3),sum(~isnan(shiftdim(SimPanel_Entrants.Employment(:,:),1)),2)'];
 PeriodHazardRate=1-NumberFirmsStillAlive(2:end)./NumberFirmsStillAlive(1:end-1);
 
 %Table 1

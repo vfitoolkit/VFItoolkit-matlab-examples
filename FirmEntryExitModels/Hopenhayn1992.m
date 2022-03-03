@@ -39,8 +39,9 @@ Params.rho=0.9;
 Params.sigma_epsilon=0.2;
 Params.logzbar=1.4;
 
-Params.q=4;
-[z_grid, pi_z]=TauchenMethod((1-Params.rho)*Params.logzbar,Params.sigma_epsilon^2,Params.rho,n_z,Params.q); %[states, transmatrix]=TauchenMethod_Param(mew,sigmasq,rho,znum,q), transmatix is (z,zprime)
+Tauchen_q=4; % Hyperparameter of Tauchen method
+[z_grid,pi_z]=discretizeAR1_Tauchen((1-Params.rho)*Params.logzbar,Params.rho,Params.sigma_epsilon,n_z,Tauchen_q);
+
 % Compute the stationary distribution of this Markov (this could be done more easily/directly/analytically)
 pistar_z=ones(size(z_grid))/n_z; % Initial guess
 dist=1;
@@ -74,11 +75,10 @@ vfoptions.keeppolicyonexit=1;
 % Outside of models like Hopenhayn (1992), which have no endogenous state, you are unlikely to use this option.
 % We also need to create 'vfoptions.ReturnToExitFn' (and 'vfoptions.ReturnToExitFnParamNames'), as below.
 
-ReturnFn=@(n_val,aprime_val, a_val, s_val, p, alpha, cf) Hopenhayn1992_ReturnFn(n_val,aprime_val, a_val, s_val, p, alpha, cf);
-ReturnFnParamNames={'p', 'alpha', 'cf'}; %It is important that these are in same order as they appear in 'Hopenhayn1992_ReturnFn'
+ReturnFn=@(d,aprime, a, s, p, alpha, cf) Hopenhayn1992_ReturnFn(d,aprime, a, s, p, alpha, cf);
 
 % For endogenous exit, also need to define the 'return to exit'.
-vfoptions.ReturnToExitFn=@(a_val, s_val) 0;
+vfoptions.ReturnToExitFn=@(a, s) 0;
 % Remark: if a more complex 'return to exit' was desired it could be
 % created in much the same way as the ReturnFn is created, but depends only
 % on (a,z) variables (and any parameters passed using ReturnToExitFnParamNames).
@@ -89,7 +89,7 @@ vfoptions.ReturnToExitFnParamNames={}; %It is important that these are in same o
 % Check that everything is working so far by solving the value function
 vfoptions % print them to screen
 tic;
-[V,Policy,ExitPolicy]=ValueFnIter_Case1(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames, vfoptions);
+[V,Policy,ExitPolicy]=ValueFnIter_Case1(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
 toc
 
 %% Stationary Distribution of Agents with entry and exit
@@ -103,7 +103,6 @@ simoptions.endogenousexit=1;
 % Edmond's slides do not spell out what is done in terms of new entrants. I
 % will set their distribution equal to the stationary distribution of the
 % markov process on productivity.
-% simoptions.DistOfNewAgents=pistar_z;
 EntryExitParamNames.DistOfNewAgents={'pistar_z'};
 Params.pistar_z=pistar_z;
 % Note: VFI Toolkit requires the DistOfNewAgents to be a pdf (so unit mass), and then uses
@@ -111,8 +110,6 @@ Params.pistar_z=pistar_z;
 % relative to existing agents. (MassOfExistingAgents is kept track of.)
 Params.Ne=0.1;
 EntryExitParamNames.MassOfNewAgents={'Ne'};
-% EntryExitParamNames.MassOfExistingAgents={'N'};
-% simoptions.MassOfNewAgents=1;
 % Note: this is just an initial guess, as it will anyway need to be
 % determined in general equilibrium. (This can be done analytically, but we won't.)
 
@@ -133,9 +130,7 @@ simoptions % Print them to screen
 
 % Check that everything is working so far by solving the simulation of
 % agent distribution to get the stationary distribution.
-% [StationaryDist, MassOfExistingAgents]=StationaryDist_Case1(Policy,n_d,n_a,n_z,pi_z, simoptions,Params,EntryExitParamNames);
 StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_z,pi_z, simoptions,Params,EntryExitParamNames);
-% Params.N=MassOfExistingAgents;
 
 % Note: When using models, such as entry and exit, where the mass of agents is not equal to 1
 % the toolkit will automatically keep track of distributions as
@@ -160,30 +155,25 @@ StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_z,pi_z, simoptions,Params,E
 %Use the toolkit to find the equilibrium prices
 GEPriceParamNames={'p','Ne'};
 
-FnsToEvaluateParamNames(1).Names={'alpha'};
-% Note: With entry-exit the mass of the distribution of agents often
-% matters. So it becomes an extra input arguement in all functions to be
-% evaluated.
-FnsToEvaluateFn_1 = @(d_val, aprime_val,a_val,z_val,agentmass,alpha) z_val*(d_val^alpha); % Total output
-FnsToEvaluate={FnsToEvaluateFn_1};
+% Note: With entry-exit the mass of the distribution of agents often matters. 
+% So it becomes an extra input arguement in all functions to be evaluated.
+FnsToEvaluate.Y = @(d, aprime,a,z,alpha) z*(d^alpha); % Total output
+% Note: If you need to use the mass of agents in a FnToEvaluate it is called 'agentmass' and must be the input immediately following z
 
 % Just to test: (note, is same command as usual, the 'StationaryDist' contains the
 % mass, and this is automatically used internally to make all relevant
 % changes to the algorithms)
 simoptions.keeppolicyonexit=1; % Is not needed for simulation, but is needed for EvalFnOnAgentDist.
-AggVars=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_z, d_grid, a_grid, z_grid, [], simoptions, EntryExitParamNames);
+AggVars=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, [], simoptions, EntryExitParamNames);
 
 % The general equilibrium condition is that the EV^e-ce=0.
 % This does not fit standard format for general equilibrium conditions.
 heteroagentoptions.specialgeneqmcondn={0,'entry'};
 % Certain kinds of general equilibrium conditions that are non-standard can
 % be used via heteroagentoptions.specialgeneqmcondn
-GeneralEqmEqnParamNames(1).Names={'Dbar'};
-GeneralEqmEqn_1 = @(AggVars,p,Dbar) Dbar/AggVars-p(1); %The requirement that the price is determined by the demand eqn
-GeneralEqmEqnParamNames(2).Names={'beta','ce'};
-GeneralEqmEqn_Entry = @(EValueFn,p,beta,ce) beta*EValueFn-ce; % Free entry conditions (expected returns equal zero in eqm).
-GeneralEqmEqns={GeneralEqmEqn_1, GeneralEqmEqn_Entry};
-% Note that GeneralEqmEqn_Entry need to be pointed out as special because
+GeneralEqmEqns.Price = @(Y,Dbar,p) Dbar/Y-p; %The requirement that the price is determined by the demand eqn
+GeneralEqmEqns.Entry = @(EValueFn,beta,ce) beta*EValueFn-ce; % Free entry conditions (expected returns equal zero in eqm).
+% Note that GeneralEqmEqns.Entry need to be pointed out as special because
 % it depends on the distribution of entrants and not the distribution of
 % existing agents (all standard general eqm conditions involve the later).
 
@@ -198,7 +188,7 @@ n_p=0;
 disp('Calculating price vector corresponding to the stationary eqm')
 % tic;
 % NOTE: EntryExitParamNames has to be passed as an additional input compared to the standard case.
-[p_eqm_initial,p_eqm_index_initial, GeneralEqmCondition_initial]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_z, n_p, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, GEPriceParamNames,heteroagentoptions, simoptions, vfoptions, EntryExitParamNames);
+[p_eqm_initial,p_eqm_index_initial, GeneralEqmCondition_initial]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_z, n_p, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions, simoptions, vfoptions, EntryExitParamNames);
 % findeqmtime=toc
 Params.p=p_eqm_initial.p;
 Params.Ne=p_eqm_initial.Ne;

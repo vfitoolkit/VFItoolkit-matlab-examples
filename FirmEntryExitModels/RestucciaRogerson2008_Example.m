@@ -139,11 +139,10 @@ Params.oneminuslambda=1-Params.lambda; % This is now the conditional probability
 Params.rho=1/(1+Params.i); % The factor at which firms discount the future depends on both the risk-free interest rate and the risk/probability of exit
 DiscountFactorParamNames={'rho','oneminuslambda'};
 
-ReturnFn=@(aprime_val, a_val, z1_val,z2_val,w,r,alpha,gamma,taurate,subsidyrate,cf) RestucciaRogerson2008_ReturnFn(aprime_val, a_val, z1_val,z2_val,w,r,alpha,gamma,taurate,subsidyrate,cf);
-ReturnFnParamNames={'w','r','alpha','gamma','taurate','subsidyrate','cf'}; %It is important that these are in same order as they appear in 'RestucciaRogerson2008_ReturnFn'
+ReturnFn=@(aprime, a, z1,z2,w,r,alpha,gamma,taurate,subsidyrate,cf) RestucciaRogerson2008_ReturnFn(aprime, a, z1,z2,w,r,alpha,gamma,taurate,subsidyrate,cf);
 
 % Check that everything is working so far by solving the value function
-[V,Policy]=ValueFnIter_Case1(n_d,n_a,n_z,[],a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames);
+[V,Policy]=ValueFnIter_Case1(n_d,n_a,n_z,[],a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, []);
 
 % If you wanted to look at the value fn
 % figure(2)
@@ -193,8 +192,7 @@ StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_z,pi_z, simoptions, Params,
 
 %% General equilibrium conditions (and aggregates needed to evaluation them)
 
-% Endogenous entry adds a general equilibrium condition, specifically a
-% 'free entry' condition.
+% Endogenous entry adds a general equilibrium condition, specifically a 'free entry' condition.
 % The only additional information needed for the general equilibrium in terms of entry
 % and exit is to know which if any of the general equilibrium conditions are 'free entry'
 % conditions and so need to be evaluated on potential entrants
@@ -203,35 +201,24 @@ StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_z,pi_z, simoptions, Params,
 %Use the toolkit to find the equilibrium prices
 GEPriceParamNames={'ebar','ce'};
 
-%Create descriptions of SS values as functions of d_grid, a_grid, s_grid &
-%pi_s (used to calculate the integral across the SS dist fn of whatever
-%functions you define here)
-FnsToEvaluateParamNames(1).Names={};
-% FnsToEvaluateFn_1 = @(aprime_val,a_val,z1_val,z2_val) a_val; %We just want the aggregate assets (which is this periods state)
-% FnsToEvaluate={FnsToEvaluateFn_1};
+% Caclulating the general equilibrium does not require any aggregate variables
 FnsToEvaluate={};
 
-%Now define the functions for the General Equilibrium conditions
-    %Should be written as LHS of general eqm eqn minus RHS, so that 
-    %the closer the value given by the function is to zero, the closer 
-    %the general eqm condition is to holding.
-%Note: length(AggVars) is as for FnsToEvaluate and length(p) is length(n_p)
 heteroagentoptions.specialgeneqmcondn={'condlentry','entry'};
-
 % A 'condlentry' general equilibrium condition will take values of greater
 % than zero for firms that decide to enter, less than zero for first that
 % decide not to enter (or more accurately, after entry decision they draw
 % their state, and then decide to cancel/abort their entry).
 
 GEPriceParamNames={'w'}; 
-    % Note that this parameter does not directly appear in any of the general eqm conditions, only indirectly by it's effect on the value fn.
-    % Note that 'ebar', the conditional entry decision, is also determined as part of general eqm, and so in some sense is a general eqm parameter. But since this is unavoidably the case for conditional entry there is no need to declare it.
-GeneralEqmEqnParamNames(1).Names={'beta'};
-GeneralEqmEqn_CondlEntry = @(ValueFn,GEprices,beta) beta*ValueFn-0; % % Conditional entry condition
-% (ValueFn>=0): should this be changed to (beta*ValueFn>=0)? Yes, because of timing.
-GeneralEqmEqnParamNames(2).Names={'beta','ce'};
-GeneralEqmEqn_Entry = @(EValueFn,GEprices,beta,ce) beta*EValueFn-ce; % Free entry conditions (expected returns equal zero in eqm); note that the first 'General eqm price' is ce, the fixed-cost of entry.
-GeneralEqmEqns={GeneralEqmEqn_CondlEntry,GeneralEqmEqn_Entry};
+% Note that this parameter does not directly appear in any of the general eqm conditions, only indirectly by it's effect on the value fn.
+% Note that 'ebar', the conditional entry decision, is also determined as part of general eqm, and so in some sense is a general eqm parameter. 
+% But since this is unavoidably the case for conditional entry there is no need to declare it.
+
+GeneralEqmEqns.CondlEntry = @(ValueFn,beta) beta*ValueFn-0; % % Conditional entry condition
+% CondlEntry: first input must be ValueFn, then any parameters
+GeneralEqmEqns.Entry = @(EValueFn,beta,ce) beta*EValueFn-ce; % Free entry conditions (expected returns equal zero in eqm); note that the first 'General eqm price' is ce, the fixed-cost of entry.
+% CondlEntry: EValueFn is a 'reserved' name, you can input it and any parameters
 
 % In principle, 'Ne', the mass of (potential) new entrants is also a
 % parameter to be determined in general equilibrium, and hence would also
@@ -240,18 +227,12 @@ GeneralEqmEqns={GeneralEqmEqn_CondlEntry,GeneralEqmEqn_Entry};
 % (households are endowed with a unit endowment of labour, and this is
 % supplied perfectly inelastically because households do not value
 % leisure). Nbar is the labour demand and comes from integral of nbar over
-% the distribution of firms. To implement this we would need to add the
-% following:
+% the distribution of firms. To implement this we would need to add the following:
 % GEPriceParamNames={'w','Ne'};
-% FnsToEvaluateParamNames(1).Names={'alpha','gamma','r','w','taurate'};
-% FnsToEvaluateFn_nbar = @(aprime_val,a_val,z1_val,z2_val,mass,alpha,gamma,r,w,taurate) (((1-taurate*z2_val)*z1_val*gamma)/w)^(1/(1-gamma)) *((alpha/r)^((1-gamma)/(1-gamma-alpha)) *(gamma/w)^(gamma/(1-gamma-alpha)) *(z1_val*(1-taurate*z2_val))^(1/(1-alpha-gamma)))^(alpha/(1-gamma)); % which evaluates to Nbar in the aggregate
-% GeneralEqmEqnParamNames(3).Names={};
-% GeneralEqmEqn_LabourMarket = @(AggVars,GEprices) 1-AggVars;
-% The obvious changes to include these in 
-% FnsToEvaluate={FnsToEvaluateFn_nbar};
-% heteroagentoptions.specialgeneqmcondn={0,'condlentry','entry'};
-% GeneralEqmEqns={GeneralEqmEqn_CondlEntry,GeneralEqmEqn_Entry, GeneralEqmEqn_LabourMarket}; 
-% would also need to be made.
+% FnsToEvaluate.nbar = @(aprime,a,z1,z2,mass,alpha,gamma,r,w,taurate) (((1-taurate*z2)*z1*gamma)/w)^(1/(1-gamma)) *((alpha/r)^((1-gamma)/(1-gamma-alpha)) *(gamma/w)^(gamma/(1-gamma-alpha)) *(z1*(1-taurate*z2))^(1/(1-alpha-gamma)))^(alpha/(1-gamma)); % which evaluates to Nbar in the aggregate
+% GeneralEqmEqn.LabourMarket = @(nbar) 1-nbar;
+% heteroagentoptions.specialgeneqmcondn={'condlentry','entry',0};
+% (Note, together with the previous two this gives us three general eqm condtions)
 % Because RR2008 model is linear in Ne (not the case for most models of entry), we 
 % can instead simply impose this afterwards, by setting Ne=1/Nbar. This is done
 % here just after computing the general equilibrium.
@@ -262,7 +243,7 @@ n_p=0;
 disp('Calculating price vector corresponding to the stationary eqm')
 % tic;
 % NOTE: EntryExitParamNames has to be passed as an additional input compared to the standard case.
-[p_eqm,p_eqm_index, GeneralEqmCondition]=HeteroAgentStationaryEqm_Case1(0, n_a, n_z, n_p, pi_z, [], a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, GEPriceParamNames,heteroagentoptions, simoptions, [], EntryExitParamNames);
+[p_eqm,p_eqm_index, GeneralEqmCondition]=HeteroAgentStationaryEqm_Case1(0, n_a, n_z, n_p, pi_z, [], a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions, simoptions, [], EntryExitParamNames);
 % findeqmtime=toc
 Params.w=p_eqm.w;
 Params.ebar=p_eqm.ebar;
@@ -271,17 +252,14 @@ Params.ebar=p_eqm.ebar;
 % I get w=1.9074, ebar is all ones.
 
 % Calculate some things in the general eqm
-[V,Policy]=ValueFnIter_Case1(n_d,n_a,n_z,[],a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames);
+[V,Policy]=ValueFnIter_Case1(n_d,n_a,n_z,[],a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, []);
 StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_z,pi_z, simoptions, Params, EntryExitParamNames);
 
-% Impose the labour market clearance, which involves calculating Ne. See
-% comments above (about 10-20 lines above).
-FnsToEvaluateParamNames(1).Names={'alpha','gamma','r','w','taurate','subsidyrate'};
-FnsToEvaluateFn_nbar = @(aprime_val,a_val,z1_val,z2_val,mass,alpha,gamma,r,w,taurate,subsidyrate) ((1-((z2_val>=0)*taurate+(z2_val<0)*subsidyrate)*z2_val)*z1_val)^(1/(1-alpha-gamma)) *(alpha/r)^(alpha/(1-gamma-alpha)) *(gamma/w)^((1-alpha)/(1-gamma-alpha)); % which evaluates to Nbar in the aggregate
-FnsToEvaluate={FnsToEvaluateFn_nbar};
-AggValues=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_z, d_grid, a_grid, z_grid, [], simoptions, EntryExitParamNames);
+% Impose the labour market clearance, which involves calculating Ne. See comments above (about 10-20 lines above).
+FnsToEvaluate.nbar = @(aprime,a,z1,z2,agentmass,alpha,gamma,r,w,taurate,subsidyrate) ((1-((z2>=0)*taurate+(z2<0)*subsidyrate)*z2)*z1)^(1/(1-alpha-gamma)) *(alpha/r)^(alpha/(1-gamma-alpha)) *(gamma/w)^((1-alpha)/(1-gamma-alpha)); % which evaluates to Nbar in the aggregate
+AggValues=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, [], simoptions, EntryExitParamNames);
 InitialNe=Params.Ne;
-Params.Ne=1/AggValues; % AggValues is presently equal to Nbar. This line is imposing/satisfying the labour market clearance condition.
+Params.Ne=1/AggValues.nbar.Aggregate; % AggValues is presently equal to Nbar. This line is imposing/satisfying the labour market clearance condition.
 StationaryDist.mass=StationaryDist.mass*(Params.Ne/InitialNe); % Take advantage of linearity of the stationary distribution in new entrants distribution.
 
 %% Table 1
@@ -313,21 +291,18 @@ fclose(FID);
 % solutions for kbar and nbar in terms of (s,tau). But will use the VFI
 % Toolkit commands to show how to apply them.
 
-FnsToEvaluateParamNames(1).Names={'alpha','gamma','r','w','taurate','subsidyrate'};
-FnsToEvaluateFn_kbar = @(aprime_val,a_val,z1_val,z2_val,mass,alpha,gamma,r,w,taurate,subsidyrate) (alpha/r)^((1-gamma)/(1-gamma-alpha)) *(gamma/w)^(gamma/(1-gamma-alpha)) *(z1_val*(1-((z2_val>=0)*taurate+(z2_val<0)*subsidyrate)*z2_val))^(1/(1-alpha-gamma));
-FnsToEvaluateParamNames(2).Names={'alpha','gamma','r','w','taurate','subsidyrate'};
-FnsToEvaluateFn_nbar = @(aprime_val,a_val,z1_val,z2_val,mass,alpha,gamma,r,w,taurate,subsidyrate) ((1-((z2_val>=0)*taurate+(z2_val<0)*subsidyrate)*z2_val)*z1_val)^(1/(1-alpha-gamma)) *(alpha/r)^(alpha/(1-gamma-alpha)) *(gamma/w)^((1-alpha)/(1-gamma-alpha)); % which evaluates to Nbar in the aggregate
-FnsToEvaluateParamNames(3).Names={'alpha','gamma','r','w','taurate','subsidyrate'};
-FnsToEvaluateFn_output = @(aprime_val,a_val,z1_val,z2_val,mass, alpha,gamma,r,w,taurate,subsidyrate) ((1-((z2_val>=0)*taurate+(z2_val<0)*subsidyrate)*z2_val))^((alpha+gamma)/(1-gamma-alpha))*z1_val^(1/(1-gamma-alpha)) *(alpha/r)^(alpha/(1-gamma-alpha)) *(gamma/w)^(gamma/(1-gamma-alpha));
-FnsToEvaluate={FnsToEvaluateFn_kbar, FnsToEvaluateFn_nbar, FnsToEvaluateFn_output};
+FnsToEvaluate.kbar = @(aprime,a,z1,z2,agentmass,alpha,gamma,r,w,taurate,subsidyrate) (alpha/r)^((1-gamma)/(1-gamma-alpha)) *(gamma/w)^(gamma/(1-gamma-alpha)) *(z1*(1-((z2>=0)*taurate+(z2<0)*subsidyrate)*z2))^(1/(1-alpha-gamma));
+FnsToEvaluate.nbar = @(aprime,a,z1,z2,agentmass,alpha,gamma,r,w,taurate,subsidyrate) ((1-((z2>=0)*taurate+(z2<0)*subsidyrate)*z2)*z1)^(1/(1-alpha-gamma)) *(alpha/r)^(alpha/(1-gamma-alpha)) *(gamma/w)^((1-alpha)/(1-gamma-alpha)); % which evaluates to Nbar in the aggregate
+FnsToEvaluate.output = @(aprime,a,z1,z2,agentmass, alpha,gamma,r,w,taurate,subsidyrate) ((1-((z2>=0)*taurate+(z2<0)*subsidyrate)*z2))^((alpha+gamma)/(1-gamma-alpha))*z1^(1/(1-gamma-alpha)) *(alpha/r)^(alpha/(1-gamma-alpha)) *(gamma/w)^(gamma/(1-gamma-alpha));
+% To use agentmass as input you must use that exact name, and it must be first input after z
 
-ValuesOnGrid=EvalFnOnAgentDist_ValuesOnGrid_Case1_Mass(StationaryDist.pdf,StationaryDist.mass, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames,EntryExitParamNames, n_d, n_a, n_z, [], a_grid, z_grid, [], simoptions);
+ValuesOnGrid=EvalFnOnAgentDist_ValuesOnGrid_Case1_Mass(StationaryDist.mass, Policy, FnsToEvaluate, Params, [],EntryExitParamNames, n_d, n_a, n_z, [], a_grid, z_grid, [], simoptions);
 
-ProbDensityFns=EvalFnOnAgentDist_pdf_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_z, [], a_grid, z_grid, [], simoptions, EntryExitParamNames);
+ProbDensityFns=EvalFnOnAgentDist_pdf_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, [], a_grid, z_grid, [], simoptions, EntryExitParamNames);
 
 % s_grid.^(1/(1-Params.gamma-Params.alpha))
-nbarValues=shiftdim(ValuesOnGrid(2,:,:,:),1);
-nbarValues=shiftdim(ValuesOnGrid(2,:,:,:),1);
+nbarValues=ValuesOnGrid.nbar(:,:,:);
+nbarValues=ValuesOnGrid.nbar(:,:,:);
 normalize_employment=nbarValues(1,1,2); % Normalize so that smallest occouring value of nbar in the baseline is equal to 1.
 nbarValues=nbarValues./normalize_employment;
 
@@ -342,17 +317,17 @@ ShareOfEstablishments(1)=sum(sum(StationaryDist.pdf(Partion1Indicator)));
 ShareOfEstablishments(2)=sum(sum(StationaryDist.pdf(Partion2Indicator)));
 ShareOfEstablishments(3)=sum(sum(StationaryDist.pdf(Partion3Indicator)));
 
-Output_pdf=shiftdim(ProbDensityFns(3,:,:,:),1);
+Output_pdf=ProbDensityFns.output;
 ShareOfOutput(1)=sum(sum(sum(Output_pdf(Partion1Indicator))));
 ShareOfOutput(2)=sum(sum(sum(Output_pdf(Partion2Indicator))));
 ShareOfOutput(3)=sum(sum(sum(Output_pdf(Partion3Indicator))));
 
-Labour_pdf=shiftdim(ProbDensityFns(2,:,:,:),1);
+Labour_pdf=ProbDensityFns.nbar;
 ShareOfLabour(1)=sum(sum(sum(Labour_pdf(Partion1Indicator))));
 ShareOfLabour(2)=sum(sum(sum(Labour_pdf(Partion2Indicator))));
 ShareOfLabour(3)=sum(sum(sum(Labour_pdf(Partion3Indicator))));
 
-Capital_pdf=shiftdim(ProbDensityFns(1,:,:,:),1);
+Capital_pdf=ProbDensityFns.kbar;
 ShareOfCapital(1)=sum(sum(sum(Capital_pdf(Partion1Indicator))));
 ShareOfCapital(2)=sum(sum(sum(Capital_pdf(Partion2Indicator))));
 ShareOfCapital(3)=sum(sum(sum(Capital_pdf(Partion3Indicator))));
@@ -379,25 +354,21 @@ fprintf(FID, '\\hline \n \\end{tabular*} \n');
 fclose(FID);
 
 %% Calculate a bunch of things related to those reported in Table 3 just to show how.
-FnsToEvaluateParamNames(4).Names={'alpha','gamma','r','w','taurate','subsidyrate'};
-FnsToEvaluateFn_subsidy = @(aprime_val,a_val,z1_val,z2_val,mass, alpha,gamma,r,w,taurate,subsidyrate) (z2_val<0)*subsidyrate* ((1-((z2_val>=0)*taurate+(z2_val<0)*subsidyrate)*z2_val))^((alpha+gamma)/(1-gamma-alpha))*z1_val^(1/(1-gamma-alpha)) *(alpha/r)^(alpha/(1-gamma-alpha)) *(gamma/w)^(gamma/(1-gamma-alpha)); % (z2_val<0)*subsidyrate)* output
+FnsToEvaluate.subsidy = @(aprime,a,z1,z2,agentmass, alpha,gamma,r,w,taurate,subsidyrate) (z2<0)*subsidyrate* ((1-((z2>=0)*taurate+(z2<0)*subsidyrate)*z2))^((alpha+gamma)/(1-gamma-alpha))*z1^(1/(1-gamma-alpha)) *(alpha/r)^(alpha/(1-gamma-alpha)) *(gamma/w)^(gamma/(1-gamma-alpha)); % (z2<0)*subsidyrate)* output
 % Following is just 'indicator for subsidised' times output, needed to calculate Ys
-FnsToEvaluateParamNames(5).Names={'alpha','gamma','r','w','taurate','subsidyrate'};
-FnsToEvaluateFn_outputofsubsidised = @(aprime_val,a_val,z1_val,z2_val,mass, alpha,gamma,r,w,taurate,subsidyrate) (z2_val<0)*((1-((z2_val>=0)*taurate+(z2_val<0)*subsidyrate)*z2_val))^((alpha+gamma)/(1-gamma-alpha))*z1_val^(1/(1-gamma-alpha)) *(alpha/r)^(alpha/(1-gamma-alpha)) *(gamma/w)^(gamma/(1-gamma-alpha));
+FnsToEvaluate.outputofsubsidised = @(aprime,a,z1,z2,agentmass, alpha,gamma,r,w,taurate,subsidyrate) (z2<0)*((1-((z2>=0)*taurate+(z2<0)*subsidyrate)*z2))^((alpha+gamma)/(1-gamma-alpha))*z1^(1/(1-gamma-alpha)) *(alpha/r)^(alpha/(1-gamma-alpha)) *(gamma/w)^(gamma/(1-gamma-alpha));
 
-FnsToEvaluate={FnsToEvaluateFn_kbar, FnsToEvaluateFn_nbar, FnsToEvaluateFn_output, FnsToEvaluateFn_subsidy, FnsToEvaluateFn_outputofsubsidised};
+AggValues=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, [], simoptions, EntryExitParamNames);
 
-AggValues=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate, Params, FnsToEvaluateParamNames, n_d, n_a, n_z, d_grid, a_grid, z_grid, [], simoptions, EntryExitParamNames);
-
-Output.Y=AggValues(3);
-Output.N=AggValues(2);
-Output.K=AggValues(1);
+Output.Y=AggValues.output.Aggregate;
+Output.N=AggValues.nbar.Aggregate;
+Output.K=AggValues.kbar.Aggregate;
 Output.KdivY=Output.K/Output.Y;
 % Params.w
 Output.mass=StationaryDist.mass; % E in notation of RR2008
 Output.TFP=(Output.Y/Output.N)./((Output.K/Output.N)^Params.alpha); % RR2008 call this 'A'.
-Output.Ys_divY=AggValues(5)/AggValues(3); % The variable Ys/Y represents the output share of establishments that are receiving a subsidy
-Output.SdivY=AggValues(4)/AggValues(3); % The variable S /Y is the total subsidies paid out to establishments receiving subsidies as a fraction of output
+Output.Ys_divY=AggValues.outputofsubsidised.Aggregate/AggValues.output.Aggregate; % The variable Ys/Y represents the output share of establishments that are receiving a subsidy
+Output.SdivY=AggValues.subsidy.Aggregate/AggValues.output.Aggregate; % The variable S /Y is the total subsidies paid out to establishments receiving subsidies as a fraction of output
 Output.tau_s=Params.subsidyrate; % The variable tau_s is the size of the subsidy required to generate a steady-state capital stock equal to that in the distortion-free economy
 
 
