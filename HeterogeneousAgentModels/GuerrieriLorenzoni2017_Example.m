@@ -10,6 +10,8 @@
 % Relatedly, the GL2017 code imports an 'income_process.mat'. To avoid this
 % dependency I here use Tauchen method with hyperparameter q=2.1 which
 % gives almost the exact same grid and transition for the exogenous shock process on z.
+% [I believe their income_process.mat was a Tauchen-Hussey discretization,
+% which is much the same for 13 points as Tauchen with hyperparameter q=2.1]
 %
 % This example has all 'save' and 'load' commands commented out. You can uncomment them if you want.
 %
@@ -21,9 +23,11 @@
 % a variables: b_it
 % z variables: theta_it, e_it
 
+addpath(genpath('./MatlabToolkits/')) % Needed to run on server
+
 %% Number of grid points
-n_d=41; % Endogenous labor 
-n_a=2^10; % Assets
+n_d=51; % Endogenous labor 
+n_a=801; % Assets
 n_theta=13;
 
 %% Parameters
@@ -136,9 +140,7 @@ GEPriceParamNames={'r'}; %,'tau'
 
 heteroagentoptions.verbose=1;
 disp('Calculating price vector corresponding to the stationary eqm')
-% tic;
-[p_eqm_initial,p_eqm_index_initial, ~]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_z, 0, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions);
-% findeqmtime=toc
+[p_eqm_initial,~, GeneralEqmCondn_initial]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_z, 0, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions);
 Params.r=p_eqm_initial.r;
 
 
@@ -169,7 +171,7 @@ AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_initial, Policy_i
 %% Final stationary equilibrium
 Params.phi=Params.phi_final;
 
-[p_eqm_final,~,~]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_z, 0, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions);
+[p_eqm_final,~,GeneralEqmCondn_final]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_z, 0, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions);
 
 Params.r=p_eqm_final.r;
 [V_final,Policy_final]=ValueFnIter_Case1(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, []);
@@ -204,7 +206,6 @@ AnnualOutput_initial=4*QuarterlyOutput_initial.Output.Mean;
 AnnualOutput_final=4*QuarterlyOutput_final.Output.Mean;
 
 %% Figure 1
-figure(1)
 l_a=length(n_a);
 l_z=length(n_z);
 % We want to plot consumption, first set up a function that returns the value of consumption
@@ -214,6 +215,7 @@ Fig1FnsToEvaluate.Consumption = @(d, aprime,a,z,r, v, B, Bprime) GuerrieriLorenz
 ValuesOnGrid=EvalFnOnAgentDist_ValuesOnGrid_Case1(Policy_initial, Fig1FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid);
 ConsumptionDecision=ValuesOnGrid.Consumption;
 
+figure(1)
 subplot(2,1,1); plot(a_grid,ConsumptionDecision(:,2),a_grid,ConsumptionDecision(:,8))
 % legend('Mean','10th','25th','Median')
 title({'Consumption'})
@@ -256,7 +258,10 @@ subplot(2,1,2); plot(a_grid,sum(StationaryDist_initial,2), a_grid,sum(Stationary
 % For the top panel in fact everything (both axes) is as a fraction of
 % initial annual output.
 subplot(2,1,1); plot(a_grid/AnnualOutput_initial,(sum(a_grid(shiftdim(Policy_initial(2,:,:),1)).*pistar_z',2)-a_grid)/AnnualOutput_initial,a_grid/AnnualOutput_initial,(sum(a_grid(shiftdim(Policy_final(2,:,:),1)).*pistar_z',2)-a_grid)/AnnualOutput_initial)
+title('bond accumulation policy')
 subplot(2,1,2); plot(a_grid/AnnualOutput_initial,sum(StationaryDist_initial,2), a_grid/AnnualOutput_initial,sum(StationaryDist_final,2))
+title('bond distribution')
+legend('Initial Steady State','Final Steady State');
 % saveas(gcf,['./SavedOutput/Graphs/GuerrieriLorenzoni_Figure4_GL2017.pdf'])
 
 
@@ -270,13 +275,15 @@ clear StationaryDist_final
 % load ./SavedOutput/GuerrieriLorenzoni2017_final.mat V_final
 % load ./SavedOutput/GuerrieriLorenzoni2017_initial.mat StationaryDist_initial
 
+% [GeneralEqmCondn_initial , GeneralEqmCondn_final]
+
 %% Compute the transition path
 % For this we need the following extra objects: PricePathOld, PriceParamNames, ParamPath, ParamPathNames, T, V_final, StationaryDist_init
 % (already calculated V_final & StationaryDist_init above)
 
 % Number of time periods to allow for the transition (if you set T too low
 % it will cause problems, too high just means run-time will be longer).
-T=25
+T=150
 
 % We want to look at a one off unanticipated path of phi. ParamPath & PathParamNames are thus given by
 ParamPath.phi=Params.phi_final*ones(T,1); % ParamPath is matrix of size T-by-'number of parameters that change over path'
@@ -290,22 +297,30 @@ PricePath0.r=[linspace(-0.01, p_eqm_final.r, floor(T/3))'; p_eqm_final.r*ones(T-
 % current bonds as this is the actual timing of the decision which the
 % interest rate (r) effects
 FnsToEvaluate.Aprime = @(d, aprime,a,z) aprime; % Aggregate assets decisions
-% Rewrite the General Eqm conditions as rules for updating the price
-transpathoptions.GEnewprice=1; % If you do not do this the codes can still solve, but take much longer as they must figure out an updating rule for themselves.
-GeneralEqmEqn.ZeroNetAssets = @(r,Aprime,Bprime) r-0.1*(Aprime-Bprime); % New interest rate is previous minus 0.1 times excess of bonds (I just guessed 0.1 as being pretty conservative, remember that the transition path will anyway do 0.1 new + 0.9 old price when updating at each iteration)
 
-% [transpathoptions.GEnewprice=1 means that the GeneralEqmEqns should be
-% expressed as how to generate a new guess for the price based on the
-% current guess; transpathoptions.GEnewprice=0 means the GeneralEqmEqns
-% should be expressed as for the standard general eqm conditions, namely
-% equations that take the value of 0 in general eqm.]
+% General equilibrium conditions (for the transition path)
+TransPathGeneralEqmEqns.ZeroNetAssets = @(r,Aprime,Bprime) Aprime-Bprime;
+% Note: For this model the transition path has the same general equilibrium conditions as the stationary equilibrium, but this will not always be true for more complex models.
+
+transpathoptions.GEnewprice=3;
+% Need to explain to transpathoptions how to use the GeneralEqmEqns to
+% update the general eqm transition prices (in PricePath).
+transpathoptions.GEnewprice3.howtoupdate=... % a row is: GEcondn, price, add, factor
+    {'ZeroNetAssets','r',0,0.0001}; % ZeroNetAssets GE condition will be positive if r is too big, so subtract
+% Note: the update is essentially new_price=price+factor*add*GEcondn_value-factor*(1-add)*GEcondn_value
+% Notice that this adds factor*GEcondn_value when add=1 and subtracts it what add=0
+% A small 'factor' will make the convergence to solution take longer, but too large a value will make it 
+% unstable (fail to converge). Technically this is the damping factor in a shooting algorithm.
+
+% NOTE TO SELF: 0.01 seems to big, 0.0001 may be to small. Might be better with 0.001
 
 % Now just run the TransitionPath_Case1 command (all of the other inputs
 % are things we had already had to define to be able to solve for the
 % initial and final equilibria)
-transpathoptions.weightscheme=1
+transpathoptions.weightscheme=1;
 transpathoptions.verbose=1
-PricePath=TransitionPath_Case1(PricePath0, ParamPath, T, V_final, StationaryDist_initial, n_d, n_a, n_z, pi_z, d_grid,a_grid,z_grid, ReturnFn,  FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, transpathoptions);
+
+PricePath=TransitionPath_Case1(PricePath0, ParamPath, T, V_final, StationaryDist_initial, n_d, n_a, n_z, pi_z, d_grid,a_grid,z_grid, ReturnFn, FnsToEvaluate, TransPathGeneralEqmEqns, Params, DiscountFactorParamNames, transpathoptions);
 
 % save ./SavedOutput/GuerrieriLorenzoni2017_transpath1.mat PricePath n_d n_a n_z
 
@@ -321,19 +336,19 @@ Fig3FnsToEvaluate.output = @(d, aprime,a,z) d*z; % y_it=n_it*theta_it Note that 
 Fig3FnsToEvaluate.debt = @(d, aprime,a,z) -a*(a<0); % debt is (minus of) negative assets
 
 AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_initial, Policy_initial, Fig3FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid);
-AggVarsPath=EvalFnOnTransPath_AggVars_Case1(Fig3FnsToEvaluate, [],PricePath, ParamPath, Params, T, V_final, StationaryDist_initial, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, ReturnFnParamNames, transpathoptions);
+AggVarsPath=EvalFnOnTransPath_AggVars_Case1(Fig3FnsToEvaluate,PricePath,ParamPath, Params, T, V_final, StationaryDist_initial, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn,transpathoptions);
 
-Output_pch=([AggVars_initial.output.Mean; AggVarsPath(:,1)]-AggVars_initial.output.Mean)/AggVars_initial.output.Mean;
+Output_pch=([AggVars_initial.output.Mean; AggVarsPath.output.Mean]-AggVars_initial.output.Mean)/AggVars_initial.output.Mean;
 
 figure(3)
 % Borrowing limit
-subplot(2,2,1); plot(0:1:T,[Params.phi_initial; ParamPath])
+subplot(2,2,1); plot(0:1:T,[Params.phi_initial; ParamPath.phi])
 title('borrowing constraint')
 % household debt-to-GDP ratio
-subplot(2,2,2); plot(0:1:T,[AggVars_initial.debt.Mean./AggVars_initial.output.Mean(1); AggVarsPath(:,2)./AggVarsPath(:,1)])
+subplot(2,2,2); plot(0:1:T,[AggVars_initial.debt.Mean./AggVars_initial.output.Mean; AggVarsPath.debt.Mean./AggVarsPath.output.Mean])
 title('household debt-to-annual-GDP ratio')
 % interest rate
-subplot(2,2,3); plot(0:1:T,100*(((1+[p_eqm_initial; PricePath]).^4)-1)) % converts to annual rate by compounding (not just multiplying by 4)
+subplot(2,2,3); plot(0:1:T,100*(((1+[p_eqm_initial.r; PricePath.r]).^4)-1)) % converts to annual rate by compounding (not just multiplying by 4)
 title('annual interest rate')
 % output
 subplot(2,2,4); plot(0:1:T,100*Output_pch) % 100* to present one percentage point as 1
@@ -343,13 +358,13 @@ title('output')
 
 % Now a version that reproduces GL2017 exactly.
 % Borrowing limit
-subplot(2,2,1); plot(0:1:T,[Params.phi_initial; ParamPath]./AnnualOutput_initial)
+subplot(2,2,1); plot(0:1:T,[Params.phi_initial; ParamPath.phi]./AnnualOutput_initial)
 title('borrowing constraint as fraction-of-initial-annual-output')
 % household debt-to-GDP ratio
-subplot(2,2,2); plot(0:1:T,[AggVars_initial.debt.Mean; AggVarsPath(1:end,2)]./AggVars_initial.output.Mean)
+subplot(2,2,2); plot(0:1:T,[AggVars_initial.debt.Mean; AggVarsPath.debt.Mean]./AggVars_initial.output.Mean)
 title('household debt-to-initial-annual-GDP ratio')
 % interest rate
-subplot(2,2,3); plot(0:1:T,100*4*[p_eqm_initial; PricePath]) % converts to annual rate by compounding (not just multiplying by 4)
+subplot(2,2,3); plot(0:1:T,100*4*[p_eqm_initial.r; PricePath.r]) % converts to annual rate by compounding (not just multiplying by 4)
 title('annual interest rate')
 % output
 subplot(2,2,4); plot(0:1:T,100*Output_pch) % 100* to present one percentage point as 1
@@ -361,17 +376,17 @@ subplot(2,2,4); plot(0:1:T,100*Output_pch) % 100* to present one percentage poin
 Fig5FnsToEvaluate.Consumption = @(d, aprime,a,z,r, v, B, Bprime) GuerrieriLorenzoni2017_ConsumptionFn(d, aprime, a, z,r, v, B, Bprime); % Consumption
 
 AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_initial, Policy_initial, Fig5FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid);
-AggVarsPath_GE=EvalFnOnTransPath_AggVars_Case1(Fig5FnsToEvaluate, [],PricePath, ParamPath, Params, T, V_final, StationaryDist_initial, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, ReturnFnParamNames, transpathoptions);
+AggVarsPath_GE=EvalFnOnTransPath_AggVars_Case1(Fig5FnsToEvaluate, PricePath, ParamPath, Params, T, V_final, StationaryDist_initial, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, transpathoptions);
 % Only debt limit reduction path
-UnchangedPricePath=p_eqm_initial*ones(T,1);
-AggVarsPath_partial_onlydebtlimit=EvalFnOnTransPath_AggVars_Case1(Fig5FnsToEvaluate, [],UnchangedPricePath, ParamPath, Params, T, V_final, StationaryDist_initial, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, ReturnFnParamNames, transpathoptions);
+UnchangedPricePath.r=p_eqm_initial.r*ones(T,1);
+AggVarsPath_partial_onlydebtlimit=EvalFnOnTransPath_AggVars_Case1(Fig5FnsToEvaluate,UnchangedPricePath, ParamPath, Params, T, V_final, StationaryDist_initial, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, transpathoptions);
 % Only interest rate path
-UnchangedParamPath=Params.phi_initial*ones(T,1);
-AggVarsPath_partial_onlyinterestrate=EvalFnOnTransPath_AggVars_Case1(Fig5FnsToEvaluate, [],PricePath,PricePathNames, UnchangedParamPath, ParamPathNames, Params, T, V_final, StationaryDist_initial, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, ReturnFnParamNames, transpathoptions);
+UnchangedParamPath.phi=Params.phi_initial*ones(T,1);
+AggVarsPath_partial_onlyinterestrate=EvalFnOnTransPath_AggVars_Case1(Fig5FnsToEvaluate,PricePath, UnchangedParamPath, Params, T, V_final, StationaryDist_initial, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, transpathoptions);
 
-AggVarsPath_GE_pch=100*(AggVarsPath_GE-AggVars_initial.Consumption.Mean)./AggVars_initial.Consumption.Mean;
-AggVarsPath_partial_onlydebtlimit_pch=100*(AggVarsPath_partial_onlydebtlimit-AggVars_initial.Consumption.Mean)./AggVars_initial.Consumption.Mean;
-AggVarsPath_partial_onlyinterestrate_pch=100*(AggVarsPath_partial_onlyinterestrate-AggVars_initial.Consumption.Mean)./AggVars_initial.Consumption.Mean;
+AggVarsPath_GE_pch=100*(AggVarsPath_GE.Consumption.Mean-AggVars_initial.Consumption.Mean)./AggVars_initial.Consumption.Mean;
+AggVarsPath_partial_onlydebtlimit_pch=100*(AggVarsPath_partial_onlydebtlimit.Consumption.Mean-AggVars_initial.Consumption.Mean)./AggVars_initial.Consumption.Mean;
+AggVarsPath_partial_onlyinterestrate_pch=100*(AggVarsPath_partial_onlyinterestrate.Consumption.Mean-AggVars_initial.Consumption.Mean)./AggVars_initial.Consumption.Mean;
 
 figure(5)
 plot(0:1:T,[0;AggVarsPath_GE_pch], 0:1:T,[0;AggVarsPath_partial_onlydebtlimit_pch], 0:1:T,[0;AggVarsPath_partial_onlyinterestrate_pch])
@@ -391,7 +406,7 @@ legend('General eqm response','Partial eqm response to debt limit reduction','Pa
 % For each of the four transition paths simulate 100 paths drawing from the relevant initial percentile, then take mean.
 % (Alternative would be a much bigger panel based on drawing from the actual inital stationary distribution, then 
 % just restrict panel based on percentiles and take means, but this would involve much more computation time)
-simoptions.numbersims=100;
+simoptions.numbersims=10^4;
 
 % We are going to want the values for consumption
 Fig6FnsToEvaluate.Consumption = @(d, aprime,a,z,r, v, B, Bprime) GuerrieriLorenzoni2017_ConsumptionFn(d, aprime, a, z,r, v, B, Bprime); % Consumption
@@ -406,37 +421,32 @@ assetdist=cumsum(sum(StationaryDist_initial,2));
 InitialDist_1stpercentile=zeros(n_a,n_z,'gpuArray');
 InitialDist_1stpercentile(prctileindexes(1),:)=StationaryDist_initial(prctileindexes(1),:)./sum(StationaryDist_initial(prctileindexes(1),:)); % Normalized version of agents holding the 1st-percentile amount of assets, I make sure they have the appropriate distribution over the exogenous shock dimension.
 % Everything else is just completely standard
-AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(InitialDist_1stpercentile, Policy_initial, Fig6FnsToEvaluate,Params, Fig6FnsToEvaluateParamNames,n_d, n_a, n_z, d_grid, a_grid,z_grid);
-SimPanelValues=SimPanelValues_TransPath_Case1(PricePath, ParamPath, T, V_final, InitialDist_1stpercentile, n_d, n_a, n_z, pi_z, d_grid,a_grid,z_grid, ReturnFn, Fig6FnsToEvaluate, Params, DiscountFactorParamNames, ReturnFnParamNames, Fig6FnsToEvaluateParamNames, transpathoptions,simoptions);
+AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(InitialDist_1stpercentile, Policy_initial, Fig6FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid);
+SimPanelValues=SimPanelValues_TransPath_Case1(PricePath, ParamPath, T, V_final, InitialDist_1stpercentile, n_d, n_a, n_z, pi_z, d_grid,a_grid,z_grid, ReturnFn, Fig6FnsToEvaluate, Params, DiscountFactorParamNames,simoptions, transpathoptions);
 % The line in the figure is just the mean for each time period of these (I am guessing), but expressed as 
 % percent deviation from steady state. [Not obvious if I should take mean and then percent deviation, or 
 % take percent deviation and then mean; have gone with the former.]
-SimPanelValues=shiftdim(SimPanelValues,1);
-% Fig6_1stPercentileTrace=(mean(SimPanelValues,2)-mean(SimPanelValues(1,:)))/mean(SimPanelValues(1,:));
-Fig6_1stPercentileTrace=(mean(SimPanelValues,2)-AggVars_initial.Consumption.Mean)/AggVars_initial.Consumption.Mean;
+Fig6_1stPercentileTrace=(mean(SimPanelValues.Consumption,2)-AggVars_initial.Consumption.Mean)/AggVars_initial.Consumption.Mean;
 
 % Now just repeat for 10th, 20th and 50th percentiles
 InitialDist_10thpercentile=zeros(n_a,n_z,'gpuArray');
 InitialDist_10thpercentile(prctileindexes(10),:)=StationaryDist_initial(prctileindexes(10),:)./sum(StationaryDist_initial(prctileindexes(10),:)); % Normalized version of agents holding the 1st-percentile amount of assets, I make sure they have the appropriate distribution over the exogenous shock dimension.
-AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(InitialDist_10thpercentile, Policy_initial, Fig6FnsToEvaluate,Params, Fig6FnsToEvaluateParamNames,n_d, n_a, n_z, d_grid, a_grid,z_grid);
-SimPanelValues=SimPanelValues_TransPath_Case1(PricePath, ParamPath, T, V_final, InitialDist_10thpercentile, n_d, n_a, n_z, pi_z, d_grid,a_grid,z_grid, ReturnFn, Fig6FnsToEvaluate, Params, DiscountFactorParamNames, ReturnFnParamNames, Fig6FnsToEvaluateParamNames, transpathoptions,simoptions);
-SimPanelValues=shiftdim(SimPanelValues,1);
-Fig6_10thPercentileTrace=(mean(SimPanelValues,2)-AggVars_initial.Consumption.Mean)/AggVars_initial.Consumption.Mean;
+AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(InitialDist_10thpercentile, Policy_initial, Fig6FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid);
+SimPanelValues=SimPanelValues_TransPath_Case1(PricePath, ParamPath, T, V_final, InitialDist_10thpercentile, n_d, n_a, n_z, pi_z, d_grid,a_grid,z_grid, ReturnFn, Fig6FnsToEvaluate, Params, DiscountFactorParamNames,simoptions, transpathoptions);
+Fig6_10thPercentileTrace=(mean(SimPanelValues.Consumption,2)-AggVars_initial.Consumption.Mean)/AggVars_initial.Consumption.Mean;
 InitialDist_20thpercentile=zeros(n_a,n_z,'gpuArray');
 InitialDist_20thpercentile(prctileindexes(20),:)=StationaryDist_initial(prctileindexes(20),:)./sum(StationaryDist_initial(prctileindexes(20),:)); % Normalized version of agents holding the 1st-percentile amount of assets, I make sure they have the appropriate distribution over the exogenous shock dimension.
-AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(InitialDist_20thpercentile, Policy_initial, Fig6FnsToEvaluate,Params, Fig6FnsToEvaluateParamNames,n_d, n_a, n_z, d_grid, a_grid,z_grid);
-SimPanelValues=SimPanelValues_TransPath_Case1(PricePath, ParamPath, T, V_final, InitialDist_20thpercentile, n_d, n_a, n_z, pi_z, d_grid,a_grid,z_grid, ReturnFn, Fig6FnsToEvaluate, Params, DiscountFactorParamNames, ReturnFnParamNames, Fig6FnsToEvaluateParamNames, transpathoptions,simoptions);
-SimPanelValues=shiftdim(SimPanelValues,1);
-Fig6_20thPercentileTrace=(mean(SimPanelValues,2)-AggVars_initial.Consumption.Mean)/AggVars_initial.Consumption.Mean;
+AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(InitialDist_20thpercentile, Policy_initial, Fig6FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid);
+SimPanelValues=SimPanelValues_TransPath_Case1(PricePath, ParamPath, T, V_final, InitialDist_20thpercentile, n_d, n_a, n_z, pi_z, d_grid,a_grid,z_grid, ReturnFn, Fig6FnsToEvaluate, Params, DiscountFactorParamNames,simoptions, transpathoptions);
+Fig6_20thPercentileTrace=(mean(SimPanelValues.Consumption,2)-AggVars_initial.Consumption.Mean)/AggVars_initial.Consumption.Mean;
 InitialDist_50thpercentile=zeros(n_a,n_z,'gpuArray');
 InitialDist_50thpercentile(prctileindexes(50),:)=StationaryDist_initial(prctileindexes(50),:)./sum(StationaryDist_initial(prctileindexes(50),:)); % Normalized version of agents holding the 1st-percentile amount of assets, I make sure they have the appropriate distribution over the exogenous shock dimension.
-AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(InitialDist_50thpercentile, Policy_initial, Fig6FnsToEvaluate,Params, Fig6FnsToEvaluateParamNames,n_d, n_a, n_z, d_grid, a_grid,z_grid);
-SimPanelValues=SimPanelValues_TransPath_Case1(PricePath, ParamPath, T, V_final, InitialDist_50thpercentile, n_d, n_a, n_z, pi_z, d_grid,a_grid,z_grid, ReturnFn, Fig6FnsToEvaluate, Params, DiscountFactorParamNames, ReturnFnParamNames, Fig6FnsToEvaluateParamNames, transpathoptions,simoptions);
-SimPanelValues=shiftdim(SimPanelValues,1);
-Fig6_50thPercentileTrace=(mean(SimPanelValues,2)-AggVars_initial.Consumption.Mean)/AggVars_initial.Consumption.Mean;
+AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(InitialDist_50thpercentile, Policy_initial, Fig6FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid);
+SimPanelValues=SimPanelValues_TransPath_Case1(PricePath, ParamPath, T, V_final, InitialDist_50thpercentile, n_d, n_a, n_z, pi_z, d_grid,a_grid,z_grid, ReturnFn, Fig6FnsToEvaluate, Params, DiscountFactorParamNames,simoptions,transpathoptions);
+Fig6_50thPercentileTrace=(mean(SimPanelValues.Consumption,2)-AggVars_initial.Consumption.Mean)/AggVars_initial.Consumption.Mean;
 
 figure(6)
-plot(0:1:T-1, [0; Fig6_1stPercentileTrace], 0:1:T-1, [0;Fig6_10thPercentileTrace], 0:1:T-1, [0;Fig6_20thPercentileTrace], 0:1:T-1, [0;Fig6_50thPercentileTrace])
+plot(0:1:T, [0; Fig6_1stPercentileTrace], 0:1:T, [0;Fig6_10thPercentileTrace], 0:1:T, [0;Fig6_20thPercentileTrace], 0:1:T, [0;Fig6_50thPercentileTrace])
 title('Consumption Response by Percentile in Initial Wealth Distribution')
 legend('1st percentile','10th percentile','20th percentile','50th percentile')
 % saveas(gcf,['./SavedOutput/Graphs/GuerrieriLorenzoni_Figure6.pdf'])
@@ -446,9 +456,9 @@ legend('1st percentile','10th percentile','20th percentile','50th percentile')
 Fig7FnsToEvaluate.Employment = @(d, aprime,a,z) d; %n_it in notation of GL2017
 
 Employment_initial=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_initial, Policy_initial, Fig7FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid,2);
-EmploymentPath_GE=EvalFnOnTransPath_AggVars_Case1(Fig7FnsToEvaluate, [],PricePath, ParamPath, Params, T, V_final, StationaryDist_initial, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, ReturnFnParamNames,transpathoptions);
+EmploymentPath_GE=EvalFnOnTransPath_AggVars_Case1(Fig7FnsToEvaluate, PricePath, ParamPath, Params, T, V_final, StationaryDist_initial, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn,transpathoptions);
 
-EmploymentPath_GE_pch=100*(EmploymentPath_GE-Employment_initial.Employment.Mean)./Employment_initial.Employment.Mean;
+EmploymentPath_GE_pch=100*(EmploymentPath_GE.Employment.Mean-Employment_initial.Employment.Mean)./Employment_initial.Employment.Mean;
 
 figure(7)
 plot(0:1:T,[0; EmploymentPath_GE_pch])
@@ -479,15 +489,11 @@ PricePath0.r=PricePath.r;
 PricePath0.omega=zeros(T,1);
 
 % Rewrite the General Eqm conditions as rules for updating the price
-transpathoptions.GEnewprice=1; % If you do not do this the codes can still solve, but take much longer as they must figure out an updating rule for themselves.
-GeneralEqmEqnParamNames(1).Names={'Bprime'};
 % Only change to this is to enforce that will only try to decrease interest rate when r>=0 is satisfied, never when it is less than zero. When r<0
 % instead as 0.01 (note that transition path codes will use 0.9*old+0.1*new anyway, so essentially adding 0.001, a tenth of one percentage point, 
 % to interest rate)
-GeneralEqmEqn_1 = @(AggVars,p,Bprime) (p(1)>=0)*(p(1)-0.1*(AggVars(1)-Bprime))+(p(1)<0)*(p(2)>0)*(p(1)+2*abs(p(1))+0.0001); % New interest rate is previous minus 0.1 times excess of bonds (I just guessed 0.1 as being pretty conservative, remember that the transition path will anyway do 0.1 new + 0.9 old price when updating at each iteration)
-GeneralEqmEqnParamNames(2).Names={};
-GeneralEqmEqn_2 = @(AggVars,p,Bprime) (p(1)<0)*(p(2)+0.003)+(p(1)>=0)*(p(2)>0.003)*(p(2)-0.003); % If r>=0 then send omega towards zero (as in this case it returns max{0,omega-0.005}). r<0 then increase omega (in this case it returns omega+0.005). (Note: the choice of +0.03 in principle will be good or bad depending on the update rule for the transition path; given that weight on old price is 0.9 this will shift omega up by (1-0.9)*0.02 whenever the interest rate is negative)
-GeneralEqmEqns={GeneralEqmEqn_1,GeneralEqmEqn_2};
+TransPathGeneralEqmEqns_sticky.updater = @(r,omega,Aprime,Bprime) (r>=0)*(-0.1*(Aprime-Bprime))+(r<0)*(omega>0)*(2*abs(r)+0.0001); % New interest rate is previous minus 0.1 times excess of bonds (I just guessed 0.1 as being pretty conservative, remember that the transition path will anyway do 0.1 new + 0.9 old price when updating at each iteration)
+TransPathGeneralEqmEqns_sticky.updateomega = @(r,omega,Bprime) (r<0)*0.001+(r>=0)*(omega>=0.001)*(-0.001); % If r>=0 then send omega towards zero (as in this case it returns max{0,omega-0.005}). r<0 then increase omega (in this case it returns omega+0.005). (Note: the choice of +0.03 in principle will be good or bad depending on the update rule for the transition path; given that weight on old price is 0.9 this will shift omega up by (1-0.9)*0.02 whenever the interest rate is negative)
 % Remark: This approach to how to update omega is different from that used
 % by GL2017. They instead force the ZLB on the interest rate r, and then use
 % omega to ensure that goods markets clear (Y=C; remember this is an
@@ -497,11 +503,15 @@ GeneralEqmEqns={GeneralEqmEqn_1,GeneralEqmEqn_2};
 % constraint is a 'knife-edge' and so it was not trivial to find something
 % that settles down rather than 'jump' back and forth between r<0 and r>0).
 
-% [transpathoptions.GEnewprice=1 means that the GeneralEqmEqns should be
-% expressed as how to generate a new guess for the price based on the
-% current guess; transpathoptions.GEnewprice=0 means the GeneralEqmEqns
-% should be expressed as for the standard general eqm conditions, namely
-% equations that take the value of 0 in general eqm.]
+transpathoptions.GEnewprice=3; 
+% Need to explain to transpathoptions how to use the GeneralEqmEqns to
+% update the general eqm transition prices (in PricePath).
+transpathoptions.GEnewprice3.howtoupdate=... % a row is: GEcondn, price, add, factor
+    {'updater','r',1,0.1;... % updater GE condition will be positive if r is too big, so subtract
+    'updateomega','omega',1,0.1}; % updateomega GE condition will be positive if r is negative (omega is too small), so add
+% Note: the update is essentially new_price=price+factor*add*GEcondn_value-factor*(1-add)*GEcondn_value
+% Notice that this adds factor*GEcondn_value when add=1 and subtracts it what add=0
+
 
 % Now just run the TransitionPath_Case1 command (all of the other inputs
 % are things we had already had to define to be able to solve for the
@@ -510,7 +520,8 @@ transpathoptions.weightscheme=1; % This is anyway the default
 transpathoptions.verbose=1;
 transpathoptions.tolerance=10^(-4); % will run until r and omega settle to four digits
 transpathoptions % show what the options have been set to
-PricePath_NK=TransitionPath_Case1(PricePath0, ParamPath, T, V_final, StationaryDist_initial, n_d, n_a, n_z, pi_z, d_grid,a_grid,z_grid, ReturnFn,  FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, FnsToEvaluateParamNames, GeneralEqmEqnParamNames, transpathoptions);
+PricePath_NK=TransitionPath_Case1(PricePath0, ParamPath, T, V_final, StationaryDist_initial, n_d, n_a, n_z, pi_z, d_grid,a_grid,z_grid, ReturnFn,  FnsToEvaluate, TransPathGeneralEqmEqns_sticky, Params, DiscountFactorParamNames, transpathoptions);
+
 
 %% Figure 8 (I do an additional Figure 17 that shows the 'wedges' and employment)
 Fig8FnsToEvaluate.output = @(d, aprime,a,z) d*z; % y_it=n_it*theta_it Note that since gov budget is balanced every period it neither adds nor subtracts (unemployment benefits + interest payments on B=lump-sum tax revenue)
@@ -518,18 +529,18 @@ Fig8FnsToEvaluate.employment = @(d, aprime,a,z) d; %n_it in notation of GL2017
 
 AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_initial, Policy_initial, Fig8FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid);
 % Difference between following two lines is PricePath vs PricePath_NK
-AggVarsPath_Flex=EvalFnOnTransPath_AggVars_Case1(Fig8FnsToEvaluate, [],PricePath, ParamPath, Params, T, V_final, StationaryDist_initial, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, ReturnFnParamNames, transpathoptions);
-AggVarsPath_NK=EvalFnOnTransPath_AggVars_Case1(Fig8FnsToEvaluate, [],PricePath_NK, ParamPath, Params, T, V_final, StationaryDist_initial, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, ReturnFnParamNames, transpathoptions);
+AggVarsPath_Flex=EvalFnOnTransPath_AggVars_Case1(Fig8FnsToEvaluate, PricePath, ParamPath, Params, T, V_final, StationaryDist_initial, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, transpathoptions);
+AggVarsPath_NK=EvalFnOnTransPath_AggVars_Case1(Fig8FnsToEvaluate, PricePath_NK, ParamPath, Params, T, V_final, StationaryDist_initial, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, transpathoptions);
 
-OutputPath_pch_Flex=(AggVarsPath_Flex(:,1)-AggVars_initial.output.Mean)./AggVars_initial.output.Mean;
-OutputPath_pch_NK=(AggVarsPath_NK(:,1)-AggVars_initial.output.Mean)./AggVars_initial.output.Mean;
+OutputPath_pch_Flex=(AggVarsPath_Flex.output.Mean-AggVars_initial.output.Mean)./AggVars_initial.output.Mean;
+OutputPath_pch_NK=(AggVarsPath_NK.output.Mean-AggVars_initial.output.Mean)./AggVars_initial.output.Mean;
 % My extras
-EmploymentPath_pch_Flex=(AggVarsPath_Flex(:,2)-AggVars_initial.employment.Mean)./AggVars_initial.employment.Mean; % This has already been calculated.
-EmploymentPath_pch_NK=(AggVarsPath_NK(:,2)-AggVars_initial.employment.Mean)./AggVars_initial.employment.Mean;
+EmploymentPath_pch_Flex=(AggVarsPath_Flex.employment.Mean-AggVars_initial.employment.Mean)./AggVars_initial.employment.Mean; % This has already been calculated.
+EmploymentPath_pch_NK=(AggVarsPath_NK.employment.Mean-AggVars_initial.employment.Mean)./AggVars_initial.employment.Mean;
 
 figure(8)
 % interest rate
-subplot(2,1,1); plot(0:1:T,4*100*[p_eqm_initial; PricePath_Flex], 0:1:T,4*100*[p_eqm_initial; PricePath_NK(:,1)])
+subplot(2,1,1); plot(0:1:T,4*100*[p_eqm_initial.r; PricePath_Flex.r], 0:1:T,4*100*[p_eqm_initial.r; PricePath_NK.r])
 title('annual interest rate')
 legend('flex price', 'NK fix price (ZLB)')
 % output
@@ -538,12 +549,10 @@ title('output')
 % ylabel('percent deviation from inital output in stationary eqm')
 % saveas(gcf,['./SavedOutput/Graphs/GuerrieriLorenzoni_Figure8.pdf'])
 
-saveas(gcf,['./SavedOutput/Graphs/GuerrieriLorenzoni_Figure8_Tauchenq3.pdf'])
-
 % Not actually part of GL2017, but let's take a look at the path for omega (the wedge on labour supply that 'enforces' the zero lower bound on interest rates)
 figure(17)
 % wedges
-subplot(2,1,1); plot(0:1:T,[0; PricePath_NK(:,2)])
+subplot(2,1,1); plot(0:1:T,[0; PricePath_NK.omega])
 title('omega (NK wedge on wages)')
 % employment
 subplot(2,1,2); plot(0:1:T,100*[0; EmploymentPath_pch_Flex],0:1:T,100*[0; EmploymentPath_pch_NK])
