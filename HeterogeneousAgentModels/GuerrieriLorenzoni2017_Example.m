@@ -23,8 +23,6 @@
 % a variables: b_it
 % z variables: theta_it, e_it
 
-addpath(genpath('./MatlabToolkits/')) % Needed to run on server
-
 %% Number of grid points
 n_d=51; % Endogenous labor 
 n_a=801; % Assets
