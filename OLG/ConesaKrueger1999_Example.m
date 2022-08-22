@@ -2,7 +2,7 @@
 
 % Solves an OLG model for a general equilibrium transition path
 
-transpathoptions.fastOLG=1;
+transpathoptions.fastOLG=0;
 % fastOLG=1 means that the code parallelizes over the finite-horizon (J)
 % while computing the transition path. It is faster but requires more memory.
 % fastOLG=0 will be slower but use less memory
@@ -205,7 +205,7 @@ Params.SS_final=0;
 %% FnsToEvaluate
 FnsToEvaluate.K = @(d,aprime,a,z) a; % Aggregate assets K
 FnsToEvaluate.N = @(d,aprime,a,z,I_j,epsilon_j) I_j*epsilon_j*z*d; % Aggregate labour supply (in efficiency units), CK1999 call this N
-FnsToEvaluate.Tr_left = @(d,aprime,a,z,sj,n) (1-sj)*aprime/(1+n); % Tr, accidental bequest transfers % The divided by (1+n) is due to population growth and because this is Tr_{t+1}
+FnsToEvaluate.Tr_left = @(d,aprime,a,z,sj,n) (1-sj)*aprime; % Tr, accidental bequest transfers % This will later get divided by (1+n) due to population growth
 FnsToEvaluate.FractionWorkingAge = @(d,aprime,a,z,I_j) I_j; % Fraction of population of working age (note that in principle this can calculated directly, but am computing it here as a way to double-check)
 FnsToEvaluate.L = @(d,aprime,a,z) d; % Hours worked L (this is not needed to find the general eqm, but we will want it later)
 
@@ -222,7 +222,7 @@ Params.Tr=0.3; % lumpsum transfers made out of the accidental bequests
 GeneralEqmEqns.CapitalMarket = @(r,K,N,theta,alpha,delta) r-(theta*(alpha)*(K^(alpha-1))*(N^(1-alpha))-delta); % Rate of return on assets is related to Marginal Product of Capital
 GeneralEqmEqns.taxbalance = @(tau,FractionWorkingAge,b) tau-b*(1-FractionWorkingAge)/FractionWorkingAge; % From eqn 2.13 and 2.12 we get: tau=b*(frac of population retired)/(fraction of population of working age)
 GeneralEqmEqns.SSbudgetbalance = @(SS,K,N,FractionWorkingAge,b,theta,alpha) SS-b*(theta*(1-alpha)*((K/N)^alpha))*N/FractionWorkingAge; % Social Security adds up, based on eqn (2.12) b*w*N/(fraction working age) [Note that because of how tau is calibrated (from b) this also means eqn (2.13) will hold.]
-GeneralEqmEqns.AccBequests = @(Tr_left,Tr) Tr-Tr_left; % Accidental bequests (adjusted for population growth) are equal to transfers received
+GeneralEqmEqns.AccBequests = @(Tr_left,Tr,n) Tr-Tr_left/(1+n); % Accidental bequests (adjusted for population growth) are equal to transfers received
 
 %% The policy reforms for which we want to find the transition paths (note they are also needed before for finding the final general equilibrium)
 
@@ -415,14 +415,17 @@ PricePath0.Tr=[linspace(p_init.Tr, p_final.Tr, floor(T/2))'; p_final.Tr*ones(T-f
 GeneralEqmEqns_Transition.CapitalMarket = @(r,K,N,theta,alpha,delta) r-(theta*(alpha)*(K^(alpha-1))*(N^(1-alpha))-delta); % Rate of return on assets is related to Marginal Product of Capital
 GeneralEqmEqns_Transition.taxbalance = @(tau,FractionWorkingAge,b) tau-b*(1-FractionWorkingAge)/FractionWorkingAge; % From eqn 2.13 and 2.12 we get: tau=b*(frac of population retired)/(fraction of population of working age)
 GeneralEqmEqns_Transition.SSbudgetbalance = @(SS,K,N,FractionWorkingAge,b,theta,alpha) SS-b*(theta*(1-alpha)*((K/N)^alpha))*N/FractionWorkingAge; % Social Security adds up, based on eqn (2.12) b*w*N/(fraction working age) [Note that because of how tau is calibrated (from b) this also means eqn (2.13) will hold.]
-GeneralEqmEqns_Transition.AccBequests = @(Tr_left,Tr) Tr-Tr_left; % Accidental bequests (adjusted for population growth) are equal to transfers received
+GeneralEqmEqns_Transition.AccBequests = @(Tr_left_tminus1,Tr,n) Tr-Tr_left_tminus1/(1+n); % Accidental bequests (from last period, and adjusted for population growth) are equal to transfers received
+% VFI Toolkit understands '_tminus1' to mean the value from the previous period.
+
+% To use a '_tminus1' variable we must include its initial value
+% To be able to use a '_tminus1' as input, we have to provide the initial value
+transpathoptions.initialvalues.Tr_left=p_eqm_init.Tr*(1+Params.n); % Tr is received, so what was left last period is (1+n) times this.
+
 
 % Setup the options relating to the transition path
-transpathoptions.weightscheme=3; % default =1
 transpathoptions.verbose=1;
 transpathoptions.maxiterations=200; % default is ???
-transpathoptions.oldpathweight=0.8; % default =0.9
-transpathoptions.historyofpricepath=1;
 vfoptions.policy_forceintegertype=2;
 
 transpathoptions.GEnewprice=3;
@@ -443,10 +446,16 @@ transpathoptions.GEnewprice3.howtoupdate=... % a row is: GEcondn, price, add, fa
 fprintf('Now computing the Transition path itself \n')
 PricePath=TransitionPath_Case1_FHorz(PricePath0, ParamPath, T, V_final, StationaryDist_init, n_d, n_a, n_z, N_j, pi_z, d_grid,a_grid,z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns_Transition, Params, DiscountFactorParamNames, AgeWeightsParamNames, transpathoptions, simoptions, vfoptions);
 
-%% For Figures 3, 9, and 12
-p_eqm_init
-PricePath
+%% Now calculate some things about the transition path (The path for Value fn, Policy fn, and Agent Distribution)
 
+% You can calculate the value and policy functions for the transition path
+[VPath,PolicyPath]=ValueFnOnTransPath_Case1_FHorz(PricePath, ParamPath, T, V_final, Policy_final, Params, n_d, n_a, n_z, N_j, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, transpathoptions);
+
+% You can then use these to calculate the agent distribution for the transition path
+AgentDistPath=AgentDistOnTransPath_Case1_FHorz(StationaryDist_init,PricePath, ParamPath, PolicyPath, AgeWeightsParamNames,n_d,n_a,n_z,N_j,pi_z,T, Params);
+
+
+%% For Figures 3, 9, and 12
 % Create graphs of output per capita, interest rates, capital-output ratio,
 % and labor supply over the transition path.
 
@@ -456,8 +465,7 @@ Figures_TransitionAggregates.interestrate=[p_eqm_init.r; PricePath.r];
 fprintf('Check if this is zero %8.8f \n',max(max(max(max(max(abs(Policy_final-round(Policy_final))))))))
 fprintf('Check if this is nonzero %8.8f \n',min(min(min(min(Policy_final)))))
 
-transpathoptions.vfoptions.policy_forceintegertype=1 % FOR SOME REASON THIS OTHERWISE ERRORED WHEN DOING IndivProdShock=0 with Reform 1
-AggVarsPath=EvalFnOnTransPath_AggVars_Case1_FHorz(FnsToEvaluate, PricePath, ParamPath, Params, T, V_final, Policy_final, StationaryDist_init, n_d, n_a, n_z, N_j, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, AgeWeightsParamNames, transpathoptions);
+AggVarsPath=EvalFnOnTransPath_AggVars_Case1_FHorz(FnsToEvaluate, AgentDistPath,PolicyPath, PricePath, ParamPath, Params, T, n_d, n_a, n_z, N_j, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, transpathoptions);
 
 K_Path=[StationaryEqmStats(1).K; AggVarsPath.K.Mean];
 N1_Path=[StationaryEqmStats(1).N1; AggVarsPath.N.Mean];
@@ -503,7 +511,8 @@ Figures_TransitionAggregates.hoursworked=L_Path;
 % 764). This is eqn (3.1) of CK1999. We already have V_init, which in the notation of eqn (3.1) is v_1
 % So we just need to compute v_2, the value fn in the first period of the transition.
 
-[VPath,PolicyPath]=ValueFnOnTransPath_Case1_FHorz(PricePath, ParamPath, T, V_final, Policy_final, StationaryDist_init, Params, n_d, n_a, n_z, N_j, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, AgeWeightsParamNames, transpathoptions);
+% Note: we actually already calculated these, but I will do it again anyway
+[VPath,PolicyPath]=ValueFnOnTransPath_Case1_FHorz(PricePath, ParamPath, T, V_final, Policy_final, Params, n_d, n_a, n_z, N_j, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, transpathoptions);
 EquivVariation=(VPath(:,:,:,1)./V_init).^(1/(Params.gamma*(1-Params.sigma)))-1;
 
 % % figure(3)
@@ -532,7 +541,7 @@ PricePath_Fixed.SS=p_final.SS*ones(T,1); % Note that this is will be zero
 PricePath_Fixed.Tr=p_init.Tr*ones(T,1);
 % Note that will uses the ParamPath the reflects the policy changes.
 
-[VPath,PolicyPath]=ValueFnOnTransPath_Case1_FHorz(PricePath_Fixed, ParamPath, T, V_final, Policy_final, StationaryDist_init, Params, n_d, n_a, n_z, N_j, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, AgeWeightsParamNames, transpathoptions);
+[VPath,PolicyPath]=ValueFnOnTransPath_Case1_FHorz(PricePath_Fixed, ParamPath, T, V_final, Policy_final, Params, n_d, n_a, n_z, N_j, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, transpathoptions);
 EquivVariation_FixedPrices=(VPath(:,:,:,1)./V_init).^(1/(Params.gamma*(1-Params.sigma)))-1;
 
 % % figure(4)
