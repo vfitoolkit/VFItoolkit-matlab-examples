@@ -297,7 +297,7 @@ PricePath0.r=[linspace(-0.01, p_eqm_final.r, floor(T/3))'; p_eqm_final.r*ones(T-
 FnsToEvaluate.Aprime = @(d, aprime,a,z) aprime; % Aggregate assets decisions
 
 % General equilibrium conditions (for the transition path)
-TransPathGeneralEqmEqns.ZeroNetAssets = @(r,Aprime,Bprime) Aprime-Bprime;
+TransPathGeneralEqmEqns.ZeroNetAssets = @(Aprime,Bprime) Aprime-Bprime;
 % Note: For this model the transition path has the same general equilibrium conditions as the stationary equilibrium, but this will not always be true for more complex models.
 
 transpathoptions.GEnewprice=3;
@@ -325,6 +325,12 @@ PricePath=TransitionPath_Case1(PricePath0, ParamPath, T, V_final, StationaryDist
 % For later we will keep another copy
 PricePath_Flex=PricePath;
 
+% Now that we have the transition, calculate the value and policy functions for the transition path
+[VPath,PolicyPath]=ValueFnOnTransPath_Case1(PricePath, ParamPath, T, V_final, Policy_final, Params, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, transpathoptions);
+% You can then use these to calculate the agent distribution for the transition path
+AgentDistPath=AgentDistOnTransPath_Case1(StationaryDist_initial,PolicyPath,n_d,n_a,n_z,pi_z,T);
+
+
 %% Figure 3
 % load ./SavedOutput/GuerrieriLorenzoni2017_initial.mat
 % load ./SavedOutput/GuerrieriLorenzoni2017_final.mat
@@ -334,7 +340,7 @@ Fig3FnsToEvaluate.output = @(d, aprime,a,z) d*z; % y_it=n_it*theta_it Note that 
 Fig3FnsToEvaluate.debt = @(d, aprime,a,z) -a*(a<0); % debt is (minus of) negative assets
 
 AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_initial, Policy_initial, Fig3FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid);
-AggVarsPath=EvalFnOnTransPath_AggVars_Case1(Fig3FnsToEvaluate,PricePath,ParamPath, Params, T, V_final, StationaryDist_initial, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn,transpathoptions);
+AggVarsPath=EvalFnOnTransPath_AggVars_Case1(Fig3FnsToEvaluate,AgentDistPath,PolicyPath,PricePath,ParamPath, Params, T, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames,transpathoptions);
 
 Output_pch=([AggVars_initial.output.Mean; AggVarsPath.output.Mean]-AggVars_initial.output.Mean)/AggVars_initial.output.Mean;
 
@@ -374,13 +380,17 @@ subplot(2,2,4); plot(0:1:T,100*Output_pch) % 100* to present one percentage poin
 Fig5FnsToEvaluate.Consumption = @(d, aprime,a,z,r, v, B, Bprime) GuerrieriLorenzoni2017_ConsumptionFn(d, aprime, a, z,r, v, B, Bprime); % Consumption
 
 AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_initial, Policy_initial, Fig5FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid);
-AggVarsPath_GE=EvalFnOnTransPath_AggVars_Case1(Fig5FnsToEvaluate, PricePath, ParamPath, Params, T, V_final, StationaryDist_initial, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, transpathoptions);
+AggVarsPath_GE=EvalFnOnTransPath_AggVars_Case1(Fig5FnsToEvaluate,AgentDistPath,PolicyPath,PricePath, ParamPath, Params, T, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, transpathoptions);
 % Only debt limit reduction path
 UnchangedPricePath.r=p_eqm_initial.r*ones(T,1);
-AggVarsPath_partial_onlydebtlimit=EvalFnOnTransPath_AggVars_Case1(Fig5FnsToEvaluate,UnchangedPricePath, ParamPath, Params, T, V_final, StationaryDist_initial, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, transpathoptions);
+[~,PolicyPath_partial_onlydebtlimit]=ValueFnOnTransPath_Case1(UnchangedPricePath, ParamPath, T, V_final, Policy_final, Params, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, transpathoptions);
+AgentDistPath_partial_onlydebtlimit=AgentDistOnTransPath_Case1(StationaryDist_initial, PolicyPath_partial_onlydebtlimit,n_d,n_a,n_z,pi_z,T);
+AggVarsPath_partial_onlydebtlimit=EvalFnOnTransPath_AggVars_Case1(Fig5FnsToEvaluate,AgentDistPath_partial_onlydebtlimit,PolicyPath_partial_onlydebtlimit,UnchangedPricePath, ParamPath, Params, T, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, transpathoptions);
 % Only interest rate path
 UnchangedParamPath.phi=Params.phi_initial*ones(T,1);
-AggVarsPath_partial_onlyinterestrate=EvalFnOnTransPath_AggVars_Case1(Fig5FnsToEvaluate,PricePath, UnchangedParamPath, Params, T, V_final, StationaryDist_initial, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, transpathoptions);
+[~,PolicyPath_partial_onlyinterestrate]=ValueFnOnTransPath_Case1(PricePath, UnchangedParamPath, T, V_final, Policy_final, Params, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, transpathoptions);
+AgentDistPath_partial_onlyinterestrate=AgentDistOnTransPath_Case1(StationaryDist_initial, PolicyPath_partial_onlyinterestrate,n_d,n_a,n_z,pi_z,T);
+AggVarsPath_partial_onlyinterestrate=EvalFnOnTransPath_AggVars_Case1(Fig5FnsToEvaluate,AgentDistPath_partial_onlyinterestrate,PolicyPath_partial_onlyinterestrate,PricePath, UnchangedParamPath, Params, T, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, transpathoptions);
 
 AggVarsPath_GE_pch=100*(AggVarsPath_GE.Consumption.Mean-AggVars_initial.Consumption.Mean)./AggVars_initial.Consumption.Mean;
 AggVarsPath_partial_onlydebtlimit_pch=100*(AggVarsPath_partial_onlydebtlimit.Consumption.Mean-AggVars_initial.Consumption.Mean)./AggVars_initial.Consumption.Mean;
@@ -454,7 +464,7 @@ legend('1st percentile','10th percentile','20th percentile','50th percentile')
 Fig7FnsToEvaluate.Employment = @(d, aprime,a,z) d; %n_it in notation of GL2017
 
 Employment_initial=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_initial, Policy_initial, Fig7FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid,2);
-EmploymentPath_GE=EvalFnOnTransPath_AggVars_Case1(Fig7FnsToEvaluate, PricePath, ParamPath, Params, T, V_final, StationaryDist_initial, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn,transpathoptions);
+EmploymentPath_GE=EvalFnOnTransPath_AggVars_Case1(Fig7FnsToEvaluate, AgentDistPath, PolicyPath,PricePath, ParamPath, Params, T, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames,transpathoptions);
 
 EmploymentPath_GE_pch=100*(EmploymentPath_GE.Employment.Mean-Employment_initial.Employment.Mean)./Employment_initial.Employment.Mean;
 
@@ -520,6 +530,11 @@ transpathoptions.tolerance=10^(-4); % will run until r and omega settle to four 
 transpathoptions % show what the options have been set to
 PricePath_NK=TransitionPath_Case1(PricePath0, ParamPath, T, V_final, StationaryDist_initial, n_d, n_a, n_z, pi_z, d_grid,a_grid,z_grid, ReturnFn,  FnsToEvaluate, TransPathGeneralEqmEqns_sticky, Params, DiscountFactorParamNames, transpathoptions);
 
+% Now that we have the transition, calculate the value and policy functions for the transition path
+[VPath_NK,PolicyPath_NK]=ValueFnOnTransPath_Case1(PricePath_NK, ParamPath, T, V_final, Policy_final, Params, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, transpathoptions);
+% You can then use these to calculate the agent distribution for the transition path
+AgentDistPath_NK=AgentDistOnTransPath_Case1(StationaryDist_initial, PolicyPath_NK,n_d,n_a,n_z,pi_z,T);
+
 
 %% Figure 8 (I do an additional Figure 17 that shows the 'wedges' and employment)
 Fig8FnsToEvaluate.output = @(d, aprime,a,z) d*z; % y_it=n_it*theta_it Note that since gov budget is balanced every period it neither adds nor subtracts (unemployment benefits + interest payments on B=lump-sum tax revenue)
@@ -527,8 +542,8 @@ Fig8FnsToEvaluate.employment = @(d, aprime,a,z) d; %n_it in notation of GL2017
 
 AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_initial, Policy_initial, Fig8FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid);
 % Difference between following two lines is PricePath vs PricePath_NK
-AggVarsPath_Flex=EvalFnOnTransPath_AggVars_Case1(Fig8FnsToEvaluate, PricePath, ParamPath, Params, T, V_final, StationaryDist_initial, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, transpathoptions);
-AggVarsPath_NK=EvalFnOnTransPath_AggVars_Case1(Fig8FnsToEvaluate, PricePath_NK, ParamPath, Params, T, V_final, StationaryDist_initial, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, transpathoptions);
+AggVarsPath_Flex=EvalFnOnTransPath_AggVars_Case1(Fig8FnsToEvaluate, AgentDistPath, PolicyPath, PricePath, ParamPath, Params, T, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, transpathoptions);
+AggVarsPath_NK=EvalFnOnTransPath_AggVars_Case1(Fig8FnsToEvaluate, AgentDistPath_NK, PolicyPath_NK, PricePath_NK, ParamPath, Params, T, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, transpathoptions);
 
 OutputPath_pch_Flex=(AggVarsPath_Flex.output.Mean-AggVars_initial.output.Mean)./AggVars_initial.output.Mean;
 OutputPath_pch_NK=(AggVarsPath_NK.output.Mean-AggVars_initial.output.Mean)./AggVars_initial.output.Mean;
