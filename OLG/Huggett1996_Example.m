@@ -31,7 +31,7 @@ Params.n=0.012; % Population growth rate of 1%
 
 % Tax rates
 % Params.tau % Determined based on r: Params.tau=0.195/(1-Params.delta*K/Y) % Note that K/Y can be calculated from r, see below
-Params.tau=0.195*(1-0.06*3); % Just give an initial guess for tau here
+Params.tau=0.195/(1-0.06*3); % Just give an initial guess for tau here
 Params.theta=0.1;
 % Accidental bequests
 % Params.T % Determined in GE
