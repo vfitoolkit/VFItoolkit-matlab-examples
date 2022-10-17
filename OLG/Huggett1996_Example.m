@@ -103,7 +103,7 @@ pi_z=gpuArray(pi_z);
 GEPriceParamNames={'r','b','T'};
 Params.r=0.06; % interest rate on assets
 Params.b=1.2; % Benefits level for retirees
-Params.T=1; % lumpsum transfers made out of the accidental bequests
+Params.T=0.2; % lumpsum transfers made out of the accidental bequests
 % I originally had b=0.8, T=0.6; switched to these after solving for the GE as I know they are
 % closer to the true values, which helps make things run a bit faster.
 
@@ -179,7 +179,7 @@ AgeWeightsParamNames={'mewj'}; % Many finite horizon models apply different weig
 Params.fractionretired=sum(Params.mewj.*Params.bvec); % Note: bvec is really just an indicator of retirement
 %% Test
 disp('Test StationaryDist')
-simoptions.parallel=4; % Sparse matrix on gpu
+simoptions.parallel=3; % Sparse matrix on cpu (results moved back to gpu)
 % simoptions=struct(); % Just use the defaults
 tic;
 StationaryDist=StationaryDist_FHorz_Case1(jequaloneDist,AgeWeightsParamNames,Policy,0,n_a,n_z,N_j,pi_z,Params,simoptions);
@@ -197,7 +197,7 @@ FnsToEvaluate.Beq = @(aprime,a,z,sj,r,tau) (1-sj)*aprime*(1+r*(1-tau)); % Total 
 % Recall that GEPriceParamNames={'r','b','T'};
 GeneralEqmEqns.capitalmarket = @(r,L,K,A,alpha,delta) r-(A*alpha*(K^(alpha-1))*(L^(1-alpha))-delta); % Rate of return on assets is related to Marginal Product of Capital
 GeneralEqmEqns.SSbalance = @(b,K,L,theta,fractionretired,alpha,A) b*fractionretired-theta*(A*(1-alpha)*(K^(alpha))*(L^(-alpha)))*L; % Retirement benefits equal Payroll tax revenue: b*fractionretired-theta*w*L
-GeneralEqmEqns.Bequests = @(T,Beq) T-Beq; % Lump-sum transfers equal Accidental bequests 
+GeneralEqmEqns.Bequests = @(T,Beq,n) T-Beq/(1+n); % Lump-sum transfers equal Accidental bequests 
 
 %% Test
 disp('Test AggVars')
