@@ -10,11 +10,11 @@
 Params.J=79; % Ages 20 to 98 inclusive.
 
 % Grid sizes to use
-n_a=1501;
+n_a=2501;
 % n_z=18; % income (these 18 points are hardcoded into z_grid and pi_z, done this way due to how Huggett sets them up)
 N_j=Params.J; % Number of periods in finite horizon
 
-% Hugget solves more than one economy (parametrization). This example just does his baseline.
+% Huggett solves more than one economy (parametrization). This example just does his baseline.
 
 %% Declare the model parameters
 % Note that r, w, and G will be determined in General equilbrium, so these are really just initial guesses.
@@ -95,8 +95,10 @@ for ii=1:length(z_grid)
     end
     pi_z(ii,end)=1-normcdf(z_grid(end)-(z_grid(end)-z_grid(end-1))/2-Params.gamma*z_grid(ii),0,sigma);
 end
-z_grid=gpuArray(z_grid);
-pi_z=gpuArray(pi_z);
+if gpuDeviceCount>0 % This is just so code can be run with or without gpu
+    z_grid=gpuArray(z_grid);
+    pi_z=gpuArray(pi_z);
+end
 % Double check: cumsum(pi_z,2) shows all each row adding to one.
 
 %% General eqm variables: give some initial values
@@ -151,7 +153,11 @@ toc
 % sum(sum(sum(sum(Policy==n_a))))
 
 %% Initial distribution of agents at birth (j=1)
-jequaloneDist=zeros(n_a,n_z,'gpuArray');
+if gpuDeviceCount>0 % This is just so code can be run with or without gpu
+    jequaloneDist=zeros(n_a,n_z,'gpuArray');
+else
+    jequaloneDist=zeros(n_a,n_z);
+end
 [trash,zeroassets_index]=min(abs(a_grid));
 % Place them on the existing z_grid based on Params.sigmasqy1 (the variance
 % of earnings at age 1) under assumption of normal distribution.
@@ -202,7 +208,7 @@ GeneralEqmEqns.Bequests = @(T,Beq,n) T-Beq/(1+n); % Lump-sum transfers equal Acc
 %% Test
 disp('Test AggVars')
 tic;
-AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], 0, n_a, n_z,N_j, 0, a_grid, z_grid, 2);
+AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], 0, n_a, n_z,N_j, 0, a_grid, z_grid);
 toc
 
 %% Solve for the General Equilibrium
@@ -262,21 +268,21 @@ end
 AggregateWealthTransers=sum(Params.mewj.*AggregateWealthTransers);
 % Total wealth
 FnsToEvaluate.TotalWealth = @(aprime,a,z) a;
-AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], 0, n_a, n_z,N_j, 0, a_grid, z_grid, 2);
+AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], 0, n_a, n_z,N_j, 0, a_grid, z_grid);
 % Transfer Wealth Ratio
 TransferWealthRatio=AggregateWealthTransers/AggVars.TotalWealth.Mean;
 
 
 % Calculate fraction of population with zero or negative wealth
 FnsToEvaluate.ZeroOrNegAssets = @(aprime,a,z) (a<=0); % Indicator for ZeroOrNegAssets
-AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], 0, n_a, n_z,N_j, 0, a_grid, z_grid, 2);
+AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], 0, n_a, n_z,N_j, 0, a_grid, z_grid);
 FractionWithZeroOrNegAssets=100*AggVars.ZeroOrNegAssets.Mean;
 
 % Calculate wealth lorenz curve (and thus all percentile shares) and also
 % the that for earnings (in text at bottom of pg 480, top of pg 481, there
 % are a bunch of descriptions of model earnings, conditional on working age)
 FnsToEvaluate.Wealth = @(aprime,a,z) a; % Notice that wealth is just the same as aggregate assets. I am going to evaluate it again anyway but this is total overkill.
-LorenzCurves=EvalFnOnAgentDist_LorenzCurve_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], 0, n_a, n_z,N_j, 0, a_grid, z_grid,2);
+LorenzCurves=EvalFnOnAgentDist_LorenzCurve_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], 0, n_a, n_z,N_j, 0, a_grid, z_grid);
 TopWealthShares=100*(1-LorenzCurves.Wealth([80,95,99],1)); % Need the 20,5, and 1 top shares for Tables of Huggett (1996)
 % Calculate the wealth gini
 WealthGini=Gini_from_LorenzCurve(LorenzCurves.Wealth);
