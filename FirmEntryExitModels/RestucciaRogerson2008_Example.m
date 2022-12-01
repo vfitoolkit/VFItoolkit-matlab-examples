@@ -202,7 +202,7 @@ StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_z,pi_z, simoptions, Params,
 GEPriceParamNames={'ebar','ce'};
 
 % Caclulating the general equilibrium does not require any aggregate variables
-FnsToEvaluate={};
+FnsToEvaluate=struct();
 
 heteroagentoptions.specialgeneqmcondn={'condlentry','entry'};
 % A 'condlentry' general equilibrium condition will take values of greater
