@@ -34,14 +34,19 @@ N_j=Params.J; % Number of periods in finite horizon
 
 % 1. Use vfoptions to state that you are using Epstein-Zin preferences.
 vfoptions.exoticpreferences='EpsteinZin'; %Use Epstein-Zin preferences
+% We are going to use the traditional consumption-units Epstein-Zin
+% preferences (rather than utility-units)
+vfoptions.EZutils=0;
 
 % 2. Set the appropriate preference parameters.
 % Epstein-Zin preference parameters
 Params.gamma=2; % Risk aversion (Note that this gamma is different to that in IIJ1995)
 Params.psi=0.5; % Intertemporal Elasticity of substitution
+% Need to explain which is which
+vfoptions.EZriskaversion='gamma';
+vfoptions.EZeis='psi';
 
-% 3. Minor adjustment to 'discount factors' and 'return function'.
-% Set the discount parameters: line 186
+% 3. Minor adjustment to 'return function'.
 % Set the return fn: lines 188-9
 
 % When using Epstein-Zin preferences the risk aversion is done as part of
@@ -202,7 +207,7 @@ Params.w=1.6;
 
 
 %% Now, create the return function 
-DiscountFactorParamNames={'beta','sj','gdiscount','gamma','psi'}; % The 'Epstein-Zin parameters' must be the last two of the discount factor parameters.
+DiscountFactorParamNames={'beta','sj','gdiscount'};
  
 ReturnFn=@(l,kprime,k,z,r,w,tau_u, tau_s,chi, h,zeta, epsilon_j,I_j,SSdivw, Tr_beq,MedicalShock,workinglifeincome,g,agej,LumpSum, theta) ImrohorogluImrohorogluJoines1995_EndoLabor_EZ_ReturnFn(l,kprime,k,z,r,w,tau_u, tau_s,chi, h,zeta, epsilon_j,I_j,SSdivw, Tr_beq,MedicalShock,workinglifeincome,g,agej,LumpSum, theta)
 % Note: MedicalShock,workinglifeincome,g,agej are only required for the extensions of the model. None of these would be needed for just the baseline model.
@@ -306,5 +311,5 @@ FnsToEvaluate3.l0 = @(d,aprime,a,z) (d==0); % Not working
 
 FractionOfPopulationNotWorking=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate3, Params, [], n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,[],simoptions);
 
-FractionOfPopulationNotWorking
+FractionOfPopulationNotWorking.l0.Mean
 % Note that if doing this endogenous labor model more seriously we would choose chi and theta to target this.
