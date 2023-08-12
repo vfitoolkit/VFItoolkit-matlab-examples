@@ -30,12 +30,18 @@ vfoptions.exoticpreferences='EpsteinZin'; %Use Epstein-Zin preferences
 % If you turn this off you would just solve the same model but with standard recursive 
 % vonNeumann-Morgerstern expected utility preferences (parameter psi would be irrelevant to model). 
 % This is intended as purely illustrative. A serious comparison of the preference types would require you to recalibrate the model.
+% We are going to use the traditional consumption-units Epstein-Zin
+% preferences (rather than utility-units)
+vfoptions.EZutils=0;
 
 % 2. Set the appropriate preference parameters.
 % Epstein-Zin preference parameters
 if strcmp(vfoptions.exoticpreferences,'EpsteinZin')
     Params.gamma=2; % Risk aversion (Note that this gamma is different to that in IIJ1995)
     Params.psi=0.5; % Intertemporal Elasticity of substitution
+    % Need to explain which is which
+    vfoptions.EZriskaversion='gamma';
+    vfoptions.EZeis='psi';
 else
     Params.gamma=2; % Note that for CES parameters, gamma is the CRRA, and
                     % 1/gamma is the intertemporal elasticity of substitution
@@ -49,14 +55,8 @@ end
 % preferences. Note however that due to how beta is used in Epstein-Zin
 % preferences these do not represent exactly the same preferences.
 
-% 3. Minor adjustment to 'discount factors' and 'return function'.
-% Set the discount parameters. 
-if strcmp(vfoptions.exoticpreferences,'EpsteinZin')
-    DiscountFactorParamNames={'beta','sj','gdiscount','gamma','psi'}; % The 'Epstein-Zin parameters' must be the last two of the discount factor parameters.
-else
-    DiscountFactorParamNames={'beta','sj','gdiscount'}; % gdiscount is 1 in the baseline, it is needed for the extension to include deterministic productivity growth
-end
-% Set the return function.
+
+% 3. Minor adjustment to 'return function'.
 if strcmp(vfoptions.exoticpreferences,'EpsteinZin')
     % Note that gamma has been removed from return function when using Epstein-Zin preferences.
     % To do this now use ImrohorogluImrohorogluJoines1995_EpsteinZin_ReturnFn as return fn.
@@ -214,7 +214,8 @@ Params.tau_u=0.019; % set to balance unemployment benefits expenditure
 Params.tau_s=0.08; % set to balance social security benefits expenditure
 Params.Tr_beq=0.07; % Accidental bequests (IIJ1995 calls this T)
 
-% Because of use of Epstein-Zin preferences the discount factors and return function have already been done.
+%% Because of use of Epstein-Zin preferences the return function have already been done.
+DiscountFactorParamNames={'beta','sj','gdiscount'}; % gdiscount is 1 in the baseline, it is needed for the extension to include deterministic productivity growth
 
 %% Now solve the value function iteration problem, just to check that things are working before we go to General Equilbrium
 disp('Test ValueFnIter')
