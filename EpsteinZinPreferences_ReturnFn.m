@@ -1,10 +1,10 @@
-function F=EpsteinZinPreferences_ReturnFn(l_val,kprime_val,k_val,z_val, zeta, delta, upsilon)
+function F=EpsteinZinPreferences_ReturnFn(l,kprime,k,z, zeta, delta, upsilon)
 
-c=exp(z_val)*(k_val^zeta)*(l_val^(1-zeta))+(1-delta)*k_val-kprime_val;
+c=exp(z)*(k^zeta)*(l^(1-zeta))+(1-delta)*k-kprime;
 
 F=-Inf;
 if c>0
-    F=(c^upsilon)*(1-l_val).^(1-upsilon);
+    F=(c^upsilon)*(1-l).^(1-upsilon);
 end
 
 end

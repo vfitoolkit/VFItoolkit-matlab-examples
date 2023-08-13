@@ -31,6 +31,8 @@ vfoptions.exoticpreferences='EpsteinZin'; % Use Epstein-Zin preferences
 % If you set this 'None' you would just solve the same model but with standard recursive vonNeumann-Morgerstern expected utility preferences
 % (parameters gamma and psi would be irrelevant to model). This is intended as purely illustrative. A serious comparison of the preference 
 % types would require you to recalibrate the model.
+vfoptions.EZutils=0;
+vfoptions.EZoneminusbeta=1; % put an extra (1-beta) term on the period-utility
 
 %% Grid sizes
 n_k=200;
@@ -71,10 +73,10 @@ end
 
 %% Create the return function
 if strcmp(vfoptions.exoticpreferences,'EpsteinZin') % This if statement is only needed so that you can easily check what happens if not using Epstein-Zin preferences
-    DiscountFactorParamNames={'beta','gamma','psi'}; % The 'Epstein-Zin parameters'
-else
-    DiscountFactorParamNames={'beta'};
+    vfoptions.EZriskaversion='gamma';
+    vfoptions.EZeis='psi';
 end
+DiscountFactorParamNames={'beta'};
 
 ReturnFn =@(l,kprime,k,z,zeta,delta,upsilon) EpsteinZinPreferences_ReturnFn(l,kprime,k,z,zeta, delta, upsilon);
 
@@ -137,6 +139,7 @@ FnsToEvaluate2.c=@(l,kprime,k,z,zeta,delta) exp(z)*(k^zeta)*(l^(1-zeta))+(1-delt
 FnsToEvaluate2.l=@(l,kprime,k,z) l; % labor supply
 FnsToEvaluate2.kprime=@(l,kprime,k,z) kprime; % savings (next period assets)
 
+simoptions=struct(); % use default options
 ValuesOnGrid=EvalFnOnAgentDist_ValuesOnGrid_Case1(Policy, FnsToEvaluate2, Params, [], n_d, n_a, n_s, d_grid, a_grid, s_grid, [], simoptions);
 
 figure(2)
