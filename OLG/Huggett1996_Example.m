@@ -282,12 +282,12 @@ FractionWithZeroOrNegAssets=100*AggVars.ZeroOrNegAssets.Mean;
 % the that for earnings (in text at bottom of pg 480, top of pg 481, there
 % are a bunch of descriptions of model earnings, conditional on working age)
 FnsToEvaluate.Wealth = @(aprime,a,z) a; % Notice that wealth is just the same as aggregate assets. I am going to evaluate it again anyway but this is total overkill.
-LorenzCurves=EvalFnOnAgentDist_LorenzCurve_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], 0, n_a, n_z,N_j, 0, a_grid, z_grid);
-TopWealthShares=100*(1-LorenzCurves.Wealth([80,95,99],1)); % Need the 20,5, and 1 top shares for Tables of Huggett (1996)
+AllStats=EvalFnOnAgentDist_AllStats_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, 0, n_a, n_z,N_j, 0, a_grid, z_grid);
+TopWealthShares=100*(1-AllStats.Wealth.LorenzCurve([80,95,99],1)); % Need the 20,5, and 1 top shares for Tables of Huggett (1996)
 % Calculate the wealth gini
-WealthGini=Gini_from_LorenzCurve(LorenzCurves.Wealth);
+WealthGini=Gini_from_LorenzCurve(AllStats.Wealth.LorenzCurve);
 
-AgeConditionalStats=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvaluate,[],Params,0,n_a,n_z,N_j,0,a_grid,z_grid);
+AgeConditionalStats=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvaluate,Params,[],0,n_a,n_z,N_j,0,a_grid,z_grid);
 
 %% Draw figures from Huggett (1996)
 
@@ -333,9 +333,9 @@ fprintf('The percentage of population with zero or negative wealth is: %8.2f \n'
 FnsToEvaluate.Earnings = @(aprime,a,z,w,ybarj) w*exp(z+ybarj); % Earnings
 
 % options.agegroupings=1:1:N_j; % for each age, this is anyway the default
-AgeConditionalStats=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvaluate,[],Params,0,n_a,n_z,N_j,0,a_grid,z_grid);
+AgeConditionalStats=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvaluate,Params,[],0,n_a,n_z,N_j,0,a_grid,z_grid);
 simoptions.agegroupings=[1,Params.JR]; % Working age, Retired (not actually interested in the numbers for retired)
-AllEmployedStats=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvaluate,[],Params,0,n_a,n_z,N_j,0,a_grid,z_grid,simoptions);
+AllEmployedStats=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvaluate,Params,[],0,n_a,n_z,N_j,0,a_grid,z_grid,simoptions);
 
 fprintf('The Earnings Gini for 20 year olds is: %8.2f \n', AgeConditionalStats.Earnings.Gini(1));
 fprintf('The Earnings Gini for 65 year olds is: %8.2f \n', AgeConditionalStats.Earnings.Gini(Params.JR));

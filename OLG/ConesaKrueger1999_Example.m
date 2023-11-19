@@ -278,7 +278,7 @@ AggVars_init=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist_init, Policy_i
 
 % Calculate the relevant entries for Table 5.
 AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist_init, Policy_init, FnsToEvaluate, Params, [], n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid); 
-AggVars_MeanMedianStdDev=EvalFnOnAgentDist_MeanMedianStdDev_FHorz_Case1(StationaryDist_init, Policy_init, FnsToEvaluate, Params, [], n_d, n_a, n_z, N_j, d_grid, a_grid, z_grid); 
+AllStats=EvalFnOnAgentDist_AllStats_FHorz_Case1(StationaryDist_init, Policy_init, FnsToEvaluate, Params, n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid); 
 
 StationaryEqmStats(1).b=Params.b;
 StationaryEqmStats(1).r=Params.r;
@@ -293,11 +293,11 @@ StationaryEqmStats(1).y=y;
 StationaryEqmStats(1).Kdivy=AggVars.K.Mean/y;
 StationaryEqmStats(1).SSdivy=Params.SS/y;
 StationaryEqmStats(1).HoursWorked=AggVars.L.Mean;
-StationaryEqmStats(1).CoeffOfVariance_a=AggVars_MeanMedianStdDev.K.StdDev/AggVars_MeanMedianStdDev.K.Mean; % Standard deviation/Mean
+StationaryEqmStats(1).CoeffOfVariance_a=AllStats.K.StdDev/AllStats.K.Mean; % Standard deviation/Mean
 
 % Statistics just for working age
 simoptions.agegroupings=[1,Params.Jr]; % Working age, Retired (not actually interested in the numbers for retired)
-AllEmployedStats=LifeCycleProfiles_FHorz_Case1(StationaryDist_init,Policy_init,FnsToEvaluate,[],Params,n_d,n_a,n_z,N_j,d_grid,a_grid,z_grid,simoptions);
+AllEmployedStats=LifeCycleProfiles_FHorz_Case1(StationaryDist_init,Policy_init,FnsToEvaluate,Params,[],n_d,n_a,n_z,N_j,d_grid,a_grid,z_grid,simoptions);
 
 % Not sure from reading CK1999, but seems to be labour hours?
 StationaryEqmStats(1).CoeffOfVariance_l=sqrt(AllEmployedStats.L.Variance(1))/AllEmployedStats.L.Mean(1); % the 1 refers to the first 'agegroupings' which is working age
@@ -305,7 +305,7 @@ StationaryEqmStats(1).CoeffOfVariance_l=sqrt(AllEmployedStats.L.Variance(1))/All
 % For Figure 1 & 2, need life cycle profile of average hours worked and assets.
 % [Actual CK1999 figure looks like it may in fact use 5 year age bins, but I do individual ages here.]
 simoptions.agegroupings=1:1:Params.J; % This is actually the default, but need to set it as previously changed it to working age
-LifeCycleProfiles_init=LifeCycleProfiles_FHorz_Case1(StationaryDist_init,Policy_init,FnsToEvaluate,[],Params,n_d,n_a,n_z,N_j,d_grid,a_grid,z_grid,simoptions);
+LifeCycleProfiles_init=LifeCycleProfiles_FHorz_Case1(StationaryDist_init,Policy_init,FnsToEvaluate,Params,[],n_d,n_a,n_z,N_j,d_grid,a_grid,z_grid,simoptions);
 
 %% Compute the final General Equilibrium
 % All three policy reforms have the same end point, namely completely terminate the social security systen:
@@ -337,7 +337,7 @@ AggVars_final=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist_final, Policy
 
 % Calculate the relevant entries for Table 5.
 AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist_final, Policy_final, FnsToEvaluate, Params, [], n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid);
-AggVars_MeanMedianStdDev=EvalFnOnAgentDist_MeanMedianStdDev_FHorz_Case1(StationaryDist_final, Policy_final, FnsToEvaluate, Params, [], n_d, n_a, n_z, N_j, d_grid, a_grid, z_grid);
+AllStats=EvalFnOnAgentDist_AllStats_FHorz_Case1(StationaryDist_final, Policy_final, FnsToEvaluate, Params, n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid);
 
 StationaryEqmStats(2).b=Params.b;
 StationaryEqmStats(2).r=Params.r;
@@ -352,11 +352,11 @@ StationaryEqmStats(2).Kdivy=AggVars.K.Mean/y;
 StationaryEqmStats(2).SSdivy=Params.SS/y;
 StationaryEqmStats(2).HoursWorked=AggVars.L.Mean;
 
-StationaryEqmStats(2).CoeffOfVariance_a=AggVars_MeanMedianStdDev.K.StdDev/AggVars_MeanMedianStdDev.K.Mean; % Standard deviation/Mean
+StationaryEqmStats(2).CoeffOfVariance_a=AllStats.K.StdDev/AllStats.K.Mean; % Standard deviation/Mean
 
 % Statistics just for working age
 simoptions.agegroupings=[1,Params.Jr]; % Working age, Retired (not actually interested in the numbers for retired)
-AllEmployedStats=LifeCycleProfiles_FHorz_Case1(StationaryDist_final,Policy_final,FnsToEvaluate,[],Params,n_d,n_a,n_z,N_j,d_grid,a_grid,z_grid,simoptions);
+AllEmployedStats=LifeCycleProfiles_FHorz_Case1(StationaryDist_final,Policy_final,FnsToEvaluate,Params,[],n_d,n_a,n_z,N_j,d_grid,a_grid,z_grid,simoptions);
 
 % Not sure from reading CK1999, but seems to be labour hours?
 StationaryEqmStats(2).CoeffOfVariance_l=sqrt(AllEmployedStats.L.Variance(1))/AllEmployedStats.L.Mean(1); % One refers to the first 'agegroupings' which is working age
@@ -369,7 +369,7 @@ StationaryEqmStats(2).EV_SS=(EV_SS_numerator/EV_SS_denominator)^(1/(Params.gamma
 % For Figure 1 & 2, need life cycle profile of average hours worked and assets.
 % [Actual CK1999 figure looks like it may in fact use 5 year age bins, but I do individual ages here.]
 simoptions.agegroupings=1:1:Params.J; % This is actually the default, but am setting it here explicitly anyway.
-LifeCycleProfiles_final=LifeCycleProfiles_FHorz_Case1(StationaryDist_final,Policy_final,FnsToEvaluate,[],Params,n_d,n_a,n_z,N_j,d_grid,a_grid,z_grid,simoptions);
+LifeCycleProfiles_final=LifeCycleProfiles_FHorz_Case1(StationaryDist_final,Policy_final,FnsToEvaluate,Params,[],n_d,n_a,n_z,N_j,d_grid,a_grid,z_grid,simoptions);
 
 
 % % %% Figure of Life-Cycle Profiles

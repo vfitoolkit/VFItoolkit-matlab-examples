@@ -238,7 +238,7 @@ fprintf('Average Utility (value fn): %8.3f \n ', sum(sum(sum(V.*StationaryDist))
 fprintf('K/Q: %8.3f \n ', K/Q);
 
 %% Some life-cycle profiles for income, consumption, and assets
-LifeCycleProfiles=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvaluate2,[],Params,0,n_a,n_z,N_j,0,a_grid,z_grid,simoptions);
+LifeCycleProfiles=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvaluate2,Params,[],0,n_a,n_z,N_j,0,a_grid,z_grid,simoptions);
 % (this creates much more than just the 'age conditional mean' profiles that we use here)
 % (Note: when productivity growth is non-zero then you would need to correct some of these)
 % I have assumed income includes capital income, unemployment benefits and
