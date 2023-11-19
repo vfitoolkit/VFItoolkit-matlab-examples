@@ -115,7 +115,7 @@ SimPanelValues.age(:,1)
 % No need to do this again, as we already have done so for the panel data.
 
 simoptions.lifecyclepercentiles=4; % Just mean and median, no percentiles. (By default is 20, so also gives min and ventiles, the later includes max by definition as the 20th ventile.)
-LifeCycleProfiles=SimLifeCycleProfiles_FHorz_Case1(InitialDist,Policy, FnsToEvaluate,[],Params,0,n_a,n_z,N_j,0,a_grid,z_grid,pi_z,simoptions);
+LifeCycleProfiles=SimLifeCycleProfiles_FHorz_Case1(InitialDist,Policy, FnsToEvaluate,Params,[],0,n_a,n_z,N_j,0,a_grid,z_grid,pi_z,simoptions);
 % There is also 'LifeCycleProfiles_FHorz_Case1()' which uses the StationaryDist, rather than as a simulation from InitialDist
 
 % Figure: Assets
