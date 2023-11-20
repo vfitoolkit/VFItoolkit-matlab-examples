@@ -282,7 +282,7 @@ FractionWithZeroOrNegAssets=100*AggVars.ZeroOrNegAssets.Mean;
 % the that for earnings (in text at bottom of pg 480, top of pg 481, there
 % are a bunch of descriptions of model earnings, conditional on working age)
 FnsToEvaluate.Wealth = @(aprime,a,z) a; % Notice that wealth is just the same as aggregate assets. I am going to evaluate it again anyway but this is total overkill.
-AllStats=EvalFnOnAgentDist_AllStats_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, 0, n_a, n_z,N_j, 0, a_grid, z_grid);
+AllStats=EvalFnOnAgentDist_AllStats_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], 0, n_a, n_z,N_j, 0, a_grid, z_grid);
 TopWealthShares=100*(1-AllStats.Wealth.LorenzCurve([80,95,99],1)); % Need the 20,5, and 1 top shares for Tables of Huggett (1996)
 % Calculate the wealth gini
 WealthGini=Gini_from_LorenzCurve(AllStats.Wealth.LorenzCurve);
