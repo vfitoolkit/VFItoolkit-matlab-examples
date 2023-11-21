@@ -109,24 +109,24 @@ SimPanelValues.age(:,1)
 
 %% Plot the mean life-cycle profiles for earnings and assets.
 
-% We will create them from the 
+% We will create them from the agent distribution, which means first creating the agent distribution
+AgeWeightParamNames={'ageweights'};
+Params.ageweights=ones(1,N_j)/N_j; % since we are only going to calculate age-conditional statistics this is anyway not going to do anything
 
-% 1. Define the 'functions to evalute' for earnings and assets.
-% No need to do this again, as we already have done so for the panel data.
+StationaryDist=StationaryDist_FHorz_Case1(InitialDist,AgeWeightParamNames,Policy,0,n_a,n_z,N_j,pi_z,Params,simoptions);
 
 simoptions.lifecyclepercentiles=4; % Just mean and median, no percentiles. (By default is 20, so also gives min and ventiles, the later includes max by definition as the 20th ventile.)
-LifeCycleProfiles=SimLifeCycleProfiles_FHorz_Case1(InitialDist,Policy, FnsToEvaluate,Params,[],0,n_a,n_z,N_j,0,a_grid,z_grid,pi_z,simoptions);
-% There is also 'LifeCycleProfiles_FHorz_Case1()' which uses the StationaryDist, rather than as a simulation from InitialDist
+AgeConditionalStats=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy, FnsToEvaluate,Params,[],0,n_a,n_z,N_j,0,a_grid,z_grid,simoptions);
 
 % Figure: Assets
 figure(2)
-plot(Params.age,LifeCycleProfiles.Assets.Mean,Params.age,LifeCycleProfiles.Assets.Median)
+plot(Params.age,AgeConditionalStats.Assets.Mean,Params.age,AgeConditionalStats.Assets.Median)
 title('Life-cycle Profile of Assets')
 legend('Mean', 'Median')
 xlabel('Age')
 % Figure: Earnings
 figure(3)
-plot(Params.age,LifeCycleProfiles.Earnings.Mean,Params.age,LifeCycleProfiles.Earnings.Median)
+plot(Params.age,AgeConditionalStats.Earnings.Mean,Params.age,AgeConditionalStats.Earnings.Median)
 title('Life-cycle Profile of Earnings')
 legend('Mean', 'Median')
 xlabel('Age')
