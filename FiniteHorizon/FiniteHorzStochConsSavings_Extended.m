@@ -99,7 +99,7 @@ InitialDist(1,ceil(n_z/2))=1; % All agents born with zero assets (a_grid(1)) and
 
 % 3. Simulate Panel Data
 % Same variables as we used for the life-cycle profiles.
-SimPanelValues=SimPanelValues_FHorz_Case1(InitialDist,Policy, FnsToEvaluate,[],Params,0,n_a,n_z,N_j,0,a_grid,z_grid,pi_z, simoptions);
+SimPanelValues=SimPanelValues_FHorz_Case1(InitialDist,Policy, FnsToEvaluate,Params,[],0,n_a,n_z,N_j,0,a_grid,z_grid,pi_z, simoptions);
 
 % So for example one simulated life-time looks like
 SimPanelValues.Assets(:,1)
