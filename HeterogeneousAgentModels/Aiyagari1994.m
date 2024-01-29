@@ -131,24 +131,28 @@ AggVars.K.Mean
 aggsavingsrate=Params.delta*(AggVars.K.Mean)^(1-Params.alpha);
 
 % Calculate Lorenz curves, Gini coefficients, and Pareto tail coefficients
+% Declare the function we want to evaluate
 FnsToEvaluateIneq.Earnings = @(aprime,a,z,w) w*z;
 FnsToEvaluateIneq.Income = @(aprime,a,z,r,w) w*z+(1+r)*a;
 FnsToEvaluateIneq.Wealth = @(aprime,a,s) a;
-LorenzCurves=EvalFnOnAgentDist_LorenzCurve_Case1(StationaryDist, Policy, FnsToEvaluateIneq, Params,[], n_d, n_a, n_z, d_grid, a_grid, z_grid);
+
+% By default, lorenz curves are calculated with 100 points, we will want to
+% use 1000 points, so
+simoptions.npoints=1000; % number of points to use for lorenz curves (default is 100) 
+AllStats=EvalFnOnAgentDist_AllStats_Case1(StationaryDist, Policy, FnsToEvaluateIneq,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid,simoptions);
 
 % 3.5 The Distributions of Earnings and Wealth
 %  Gini for Earnings
-EarningsGini=Gini_from_LorenzCurve(LorenzCurves.Earnings);
-IncomeGini=Gini_from_LorenzCurve(LorenzCurves.Income);
-WealthGini=Gini_from_LorenzCurve(LorenzCurves.Wealth);
+fprintf('The Gini coeff for Earnings is: %8.4f \n ',AllStats.Earnings.Gini)
+fprintf('The Gini coeff for Income is: %8.4f \n ',AllStats.Income.Gini)
+fprintf('The Gini coeff for Wealth is: %8.4f \n ',AllStats.Wealth.Gini)
 
 % Calculate inverted Pareto coeff, b, from the top income shares as b=1/[log(S1%/S0.1%)/log(10)] (formula taken from Excel download of WTID database)
 % No longer used: Calculate Pareto coeff from Gini as alpha=(1+1/G)/2; ( http://en.wikipedia.org/wiki/Pareto_distribution#Lorenz_curve_and_Gini_coefficient)
-% Recalculte Lorenz curves, now with 1000 points
-LorenzCurves=EvalFnOnAgentDist_LorenzCurve_Case1(StationaryDist, Policy, FnsToEvaluateIneq, Params,[], n_d, n_a, n_z, d_grid, a_grid, z_grid, [],1000);
-EarningsParetoCoeff=1/((log(LorenzCurves.Earnings(990))/log(LorenzCurves.Earnings(999)))/log(10)); %(1+1/EarningsGini)/2;
-IncomeParetoCoeff=1/((log(LorenzCurves.Income(990))/log(LorenzCurves.Income(999)))/log(10)); %(1+1/IncomeGini)/2;
-WealthParetoCoeff=1/((log(LorenzCurves.Wealth(990))/log(LorenzCurves.Wealth(999)))/log(10)); %(1+1/WealthGini)/2;
+% Recalculate Lorenz curves, now with 1000 points
+EarningsParetoCoeff=1/((log(AllStats.Earnings.LorenzCurve(990))/log(AllStats.Earnings.LorenzCurve(999)))/log(10)); %(1+1/EarningsGini)/2;
+IncomeParetoCoeff=1/((log(AllStats.Income.LorenzCurve(990))/log(AllStats.Income.LorenzCurve(999)))/log(10)); %(1+1/IncomeGini)/2;
+WealthParetoCoeff=1/((log(AllStats.Wealth.LorenzCurve(990))/log(AllStats.Wealth.LorenzCurve(999)))/log(10)); %(1+1/WealthGini)/2;
 
 
 %% Display some output about the solution
