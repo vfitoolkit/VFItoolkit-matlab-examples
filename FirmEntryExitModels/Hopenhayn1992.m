@@ -193,6 +193,12 @@ disp('Calculating price vector corresponding to the stationary eqm')
 Params.p=p_eqm_initial.p;
 Params.Ne=p_eqm_initial.Ne;
 
+%% Now that we have the general eqm, we need to compute the value function, etc. in this eqm
+[V,Policy,ExitPolicy]=ValueFnIter_Case1(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
+StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_z,pi_z, simoptions,Params,EntryExitParamNames);
+AggVars=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, [], simoptions, EntryExitParamNames);
+
+
 %% In lecture notes Chris Edmonds goes on to plot two graphs.
 
 % First contains the value function and some things like exit cutoff level.
@@ -226,7 +232,6 @@ title('Figure from Slide 29 of Chris Edmonds (cdfs)')
 % instead of just the actual probability density function. If you wish to do this I recommend
 % kernel-smoothed non-parametric estimators of the probability distribution funciton. 
 % Note distribution vs density.]
-
 
 
 
