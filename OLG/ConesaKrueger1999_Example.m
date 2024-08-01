@@ -352,7 +352,7 @@ StationaryEqmStats(2).Kdivy=AggVars.K.Mean/y;
 StationaryEqmStats(2).SSdivy=Params.SS/y;
 StationaryEqmStats(2).HoursWorked=AggVars.L.Mean;
 
-StationaryEqmStats(2).CoeffOfVariance_a=AllStats.K.StdDev/AllStats.K.Mean; % Standard deviation/Mean
+StationaryEqmStats(2).CoeffOfVariance_a=AllStats.K.StdDeviation/AllStats.K.Mean; % Standard deviation/Mean
 
 % Statistics just for working age
 simoptions.agegroupings=[1,Params.Jr]; % Working age, Retired (not actually interested in the numbers for retired)
@@ -465,11 +465,11 @@ Figures_TransitionAggregates.interestrate=[p_eqm_init.r; PricePath.r];
 fprintf('Check if this is zero %8.8f \n',max(max(max(max(max(abs(Policy_final-round(Policy_final))))))))
 fprintf('Check if this is nonzero %8.8f \n',min(min(min(min(Policy_final)))))
 
-AggVarsPath=EvalFnOnTransPath_AggVars_Case1_FHorz(FnsToEvaluate, AgentDistPath,PolicyPath, PricePath, ParamPath, Params, T, n_d, n_a, n_z, N_j, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, transpathoptions);
+AggVarsPath=EvalFnOnTransPath_AggVars_Case1_FHorz(FnsToEvaluate, AgentDistPath,PolicyPath, PricePath, ParamPath, Params, T, n_d, n_a, n_z, N_j, d_grid, a_grid,z_grid, transpathoptions);
 
-K_Path=[StationaryEqmStats(1).K; AggVarsPath.K.Mean];
-N1_Path=[StationaryEqmStats(1).N1; AggVarsPath.N.Mean];
-L_Path=[StationaryEqmStats(1).HoursWorked; AggVarsPath.L.Mean];
+K_Path=[StationaryEqmStats(1).K, AggVarsPath.K.Mean];
+N1_Path=[StationaryEqmStats(1).N1, AggVarsPath.N.Mean];
+L_Path=[StationaryEqmStats(1).HoursWorked, AggVarsPath.L.Mean];
 y_Path=Params.theta*(K_Path.^Params.alpha).*(N1_Path.^(1-Params.alpha));
 
 Figures_TransitionAggregates.outputpercapita=y_Path; % Output per capita is just equal to output as mass of agents is normalized to one.
