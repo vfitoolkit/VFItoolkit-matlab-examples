@@ -185,8 +185,7 @@ AgeWeightsParamNames={'mewj'}; % Many finite horizon models apply different weig
 Params.fractionretired=sum(Params.mewj.*Params.bvec); % Note: bvec is really just an indicator of retirement
 %% Test
 disp('Test StationaryDist')
-simoptions.parallel=3; % Sparse matrix on cpu (results moved back to gpu)
-% simoptions=struct(); % Just use the defaults
+simoptions=struct(); % Just use the defaults
 tic;
 StationaryDist=StationaryDist_FHorz_Case1(jequaloneDist,AgeWeightsParamNames,Policy,0,n_a,n_z,N_j,pi_z,Params,simoptions);
 toc
