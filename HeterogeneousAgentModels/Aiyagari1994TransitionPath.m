@@ -176,6 +176,15 @@ figure(1)
 plot(0:1:T, [p_eqm_init.r;PricePath.r])
 title('interest rate path for transtion')
 
+%% Look at results
+[VPath,PolicyPath]=ValueFnOnTransPath_Case1(PricePath, ParamPath, T, V_final, Policy_final, Params, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, transpathoptions, vfoptions);
 
+AgentDistPath=AgentDistOnTransPath_Case1(StationaryDist_init, PolicyPath,n_d,n_a,n_z,pi_z,T,simoptions);
+
+AggVarsPath=EvalFnOnTransPath_AggVars_Case1(FnsToEvaluate,AgentDistPath,PolicyPath,PricePath,ParamPath, Params, T, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid,simoptions);
+
+figure(2)
+plot(0:1:T, [AggVars_init.K.Mean; AggVarsPath.K.Mean])
+title('path of aggregate physical capital for transtion')
 
 
