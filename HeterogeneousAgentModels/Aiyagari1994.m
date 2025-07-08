@@ -56,15 +56,15 @@ k_grid=10*K_ss*(linspace(0,1,n_k).^3)'; % linspace ^3 puts more points near zero
 % Bring model into the notational conventions used by the toolkit
 d_grid=0; %There is no d variable
 a_grid=k_grid;
-% pi_z;
 % z_grid
+% pi_z;
 
 n_d=0;
 n_a=n_k;
 % n_z
 
 % Create functions to be evaluated
-FnsToEvaluate.K = @(aprime,a,s) a; %We just want the aggregate assets (which is this periods state)
+FnsToEvaluate.K = @(aprime,a,z) a; %We just want the aggregate assets (which is this periods state)
 
 % Now define the functions for the General Equilibrium conditions
     % Should be written as LHS of general eqm eqn minus RHS, so that the closer the value given by the function is to 
@@ -77,7 +77,7 @@ fprintf('Grid sizes are: %i points for assets, and %i points for exogenous shock
 %%
 DiscountFactorParamNames={'beta'};
 
-ReturnFn=@(aprime, a, s, alpha,delta,mu,r) Aiyagari1994_ReturnFn(aprime, a, s,alpha,delta,mu,r);
+ReturnFn=@(aprime, a, z, alpha,delta,mu,r) Aiyagari1994_ReturnFn(aprime, a, z,alpha,delta,mu,r);
 % The first inputs must be: next period endogenous state, endogenous state, exogenous state. Followed by any parameters
 
 %%
@@ -134,7 +134,7 @@ aggsavingsrate=Params.delta*(AggVars.K.Mean)^(1-Params.alpha);
 % Declare the function we want to evaluate
 FnsToEvaluateIneq.Earnings = @(aprime,a,z,w) w*z;
 FnsToEvaluateIneq.Income = @(aprime,a,z,r,w) w*z+(1+r)*a;
-FnsToEvaluateIneq.Wealth = @(aprime,a,s) a;
+FnsToEvaluateIneq.Wealth = @(aprime,a,z) a;
 
 % By default, lorenz curves are calculated with 100 points, we will want to
 % use 1000 points, so
