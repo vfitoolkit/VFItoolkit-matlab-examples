@@ -33,6 +33,7 @@ Tauchen_q=3; % Footnote 33 of Aiyagari(1993WP, pg 25) implicitly says that he us
 [z_grid,pi_z]=discretizeAR1_Tauchen(0,Params.rho,sqrt((1-Params.rho^2)*Params.sigma^2),n_z,Tauchen_q);
 % Note: sigma is standard deviations of s, input needs to be standard deviation of the innovations
 % Because s is AR(1), the variance of the innovations is (1-rho^2)*sigma^2
+% Note: Nowadays you would be better using Farmer-Toda than Tauchen, but leaving it here to match the original
 
 [z_mean,z_variance,z_corr,~]=MarkovChainMoments(z_grid,pi_z);
 z_grid=exp(z_grid);
@@ -112,11 +113,11 @@ fprintf('Calculating various equilibrium objects \n')
 % V is value function
 % Policy is policy function (but as an index of k_grid, not the actual values)
 
-% PolicyValues=PolicyInd2Val_Case1(Policy,n_d,n_a,n_s,d_grid,a_grid); % This will give you the policy in terms of values rather than index
+% PolicyValues=PolicyInd2Val_Case1(Policy,n_d,n_a,n_s,d_grid,a_grid,vfoptions); % This will give you the policy in terms of values rather than index
 
 StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_z,pi_z, simoptions);
 
-AggVars=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid);
+AggVars=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid,simoptions);
 
 % AggVars contains the aggregate values of the 'FnsToEvaluate' (in this model aggregates are equal to the mean expectation over the agent distribution)
 % Currently the only FnsToEvaluate is assets, so we get aggregate capital stock
