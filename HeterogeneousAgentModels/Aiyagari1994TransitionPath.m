@@ -110,7 +110,7 @@ Params.r=p_eqm_init.r;
 StationaryDist_init=StationaryDist_Case1(Policy_init,n_d,n_a,n_z,pi_z);
 
 % Following line is just a check
-AggVars_init=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_init, Policy_init, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid);
+AggVars_init=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_init, Policy_init, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid,simoptions);
 
 %% Compute the final general equilbrium
 Params.r=0.038; % Initial guess
@@ -129,7 +129,7 @@ Params.r=p_eqm_final.r;
 [V_final,Policy_final]=ValueFnIter_Case1(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn,Params, DiscountFactorParamNames,[],vfoptions);
 
 StationaryDist_final=StationaryDist_Case1(Policy_final,n_d,n_a,n_z,pi_z);
-AggVars_final=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_final, Policy_final, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid);
+AggVars_final=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_final, Policy_final, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid,simoptions);
 
 % surf(k_grid*ones(1,n_s),ones(n_a,1)*s_grid',V_final)
 
@@ -184,7 +184,7 @@ AgentDistPath=AgentDistOnTransPath_Case1(StationaryDist_init, PolicyPath,n_d,n_a
 AggVarsPath=EvalFnOnTransPath_AggVars_Case1(FnsToEvaluate,AgentDistPath,PolicyPath,PricePath,ParamPath, Params, T, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid,simoptions);
 
 figure(2)
-plot(0:1:T, [AggVars_init.K.Mean; AggVarsPath.K.Mean])
+plot(0:1:T, [AggVars_init.K.Mean, AggVarsPath.K.Mean])
 title('path of aggregate physical capital for transtion')
 
 
