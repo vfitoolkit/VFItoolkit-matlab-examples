@@ -1,4 +1,4 @@
-% Replication of Huggett (1996) - Wealth Distribution in Life Cycle Economies
+% Example based on Huggett (1996) - Wealth Distribution in Life Cycle Economies
 
 % I follow notation of Huggett (1996) for all parameters except the number
 % of period (and retirement age) which I denote by J (JR) rather than N.
@@ -10,7 +10,7 @@
 Params.J=79; % Ages 20 to 98 inclusive.
 
 % Grid sizes to use
-n_a=2501;
+n_a=501;
 % n_z=18; % income (these 18 points are hardcoded into z_grid and pi_z, done this way due to how Huggett sets them up)
 N_j=Params.J; % Number of periods in finite horizon
 
@@ -140,11 +140,18 @@ ReturnFn=@(aprime,a,z,sigma,r,ybarj,theta,b,bvec,T,delta,alpha,A,bc_equalsminusw
 % state, this period endogenous state (any exogenous shocks). After that come any parameters.
 
 %% Now solve the value function iteration problem, just to check that things are working before we go to General Equilbrium
+if gpuDeviceCount>0 % This is just so code can be run with or without gpu
+    vfoptions.divideandconquer=1;
+    vfoptions.gridinterplayer=1;
+    vfoptions.ngridinterp=25;
+    simoptions.gridinterplayer=vfoptions.gridinterplayer;
+    simoptions.ngridinterp=vfoptions.ngridinterp;
+else
+    vfoptions=struct(); % Just use the defaults
+    simoptions=struct(); % Just use the defaults
+end
 
 disp('Test ValueFnIter')
-% vfoptions.verbose=0;
-% vfoptions.policy_forceintegertype=2; % Policy was not being treated as integers (one of the elements was 10^(-15) different from an integer)
-vfoptions=struct(); % Just use the defaults
 tic;
 [V, Policy]=ValueFnIter_Case1_FHorz(0,n_a,n_z,N_j, 0, a_grid, z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [],vfoptions);
 toc
@@ -185,7 +192,6 @@ AgeWeightsParamNames={'mewj'}; % Many finite horizon models apply different weig
 Params.fractionretired=sum(Params.mewj.*Params.bvec); % Note: bvec is really just an indicator of retirement
 %% Test
 disp('Test StationaryDist')
-simoptions=struct(); % Just use the defaults
 tic;
 StationaryDist=StationaryDist_FHorz_Case1(jequaloneDist,AgeWeightsParamNames,Policy,0,n_a,n_z,N_j,pi_z,Params,simoptions);
 toc
@@ -219,7 +225,7 @@ toc
 % Without p_grid, just searching. Use n_p=0. (Setting the actual algorithm
 % used to 'search' can be done with heteroagentoptions.fminalgo)
 heteroagentoptions.verbose=1;
-[p_eqm,p_eqm_index, GeneralEqmEqnsValues]=HeteroAgentStationaryEqm_Case1_FHorz(jequaloneDist,AgeWeightsParamNames,0, n_a, n_z, N_j, 0, pi_z, 0, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions,simoptions,vfoptions);
+[p_eqm, GeneralEqmEqnsValues]=HeteroAgentStationaryEqm_Case1_FHorz(jequaloneDist,AgeWeightsParamNames,0, n_a, n_z, N_j, 0, pi_z, 0, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions,simoptions,vfoptions);
 Params.r=p_eqm.r;
 Params.b=p_eqm.b;
 Params.T=p_eqm.T;
