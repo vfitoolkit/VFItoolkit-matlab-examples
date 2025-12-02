@@ -142,7 +142,8 @@ DiscountFactorParamNames={'rho','oneminuslambda'};
 ReturnFn=@(aprime, a, z1,z2,w,r,alpha,gamma,taurate,subsidyrate,cf) RestucciaRogerson2008_ReturnFn(aprime, a, z1,z2,w,r,alpha,gamma,taurate,subsidyrate,cf);
 
 % Check that everything is working so far by solving the value function
-[V,Policy]=ValueFnIter_Case1(n_d,n_a,n_z,[],a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, []);
+vfoptions=struct(); % use default options
+[V,Policy]=ValueFnIter_Case1(n_d,n_a,n_z,[],a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [],vfoptions);
 
 % If you wanted to look at the value fn
 % figure(2)
@@ -201,7 +202,7 @@ StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_z,pi_z, simoptions, Params,
 %Use the toolkit to find the equilibrium prices
 GEPriceParamNames={'ebar','ce'};
 
-% Caclulating the general equilibrium does not require any aggregate variables
+% Calculating the general equilibrium does not require any aggregate variables
 FnsToEvaluate=struct();
 
 heteroagentoptions.specialgeneqmcondn={'condlentry','entry'};
@@ -252,7 +253,7 @@ Params.ebar=p_eqm.ebar;
 % I get w=1.9074, ebar is all ones.
 
 % Calculate some things in the general eqm
-[V,Policy]=ValueFnIter_Case1(n_d,n_a,n_z,[],a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, []);
+[V,Policy]=ValueFnIter_Case1(n_d,n_a,n_z,[],a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
 StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_z,pi_z, simoptions, Params, EntryExitParamNames);
 
 % Impose the labour market clearance, which involves calculating Ne. See comments above (about 10-20 lines above).
@@ -296,12 +297,11 @@ FnsToEvaluate.nbar = @(aprime,a,z1,z2,agentmass,alpha,gamma,r,w,taurate,subsidyr
 FnsToEvaluate.output = @(aprime,a,z1,z2,agentmass, alpha,gamma,r,w,taurate,subsidyrate) ((1-((z2>=0)*taurate+(z2<0)*subsidyrate)*z2))^((alpha+gamma)/(1-gamma-alpha))*z1^(1/(1-gamma-alpha)) *(alpha/r)^(alpha/(1-gamma-alpha)) *(gamma/w)^(gamma/(1-gamma-alpha));
 % To use agentmass as input you must use that exact name, and it must be first input after z
 
-ValuesOnGrid=EvalFnOnAgentDist_ValuesOnGrid_Case1_Mass(StationaryDist.mass, Policy, FnsToEvaluate, Params, [],EntryExitParamNames, n_d, n_a, n_z, [], a_grid, z_grid, [], simoptions);
+ValuesOnGrid=EvalFnOnAgentDist_ValuesOnGrid_InfHorz_Mass(StationaryDist.mass, Policy, FnsToEvaluate, Params, [],EntryExitParamNames, n_d, n_a, n_z, [], a_grid, z_grid, simoptions);
 
-ProbDensityFns=EvalFnOnAgentDist_pdf_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, [], a_grid, z_grid, [], simoptions, EntryExitParamNames);
+ProbDensityFns=EvalFnOnAgentDist_pdf_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, [], a_grid, z_grid, simoptions, EntryExitParamNames);
 
 % s_grid.^(1/(1-Params.gamma-Params.alpha))
-nbarValues=ValuesOnGrid.nbar(:,:,:);
 nbarValues=ValuesOnGrid.nbar(:,:,:);
 normalize_employment=nbarValues(1,1,2); % Normalize so that smallest occouring value of nbar in the baseline is equal to 1.
 nbarValues=nbarValues./normalize_employment;
@@ -358,7 +358,7 @@ FnsToEvaluate.subsidy = @(aprime,a,z1,z2,agentmass, alpha,gamma,r,w,taurate,subs
 % Following is just 'indicator for subsidised' times output, needed to calculate Ys
 FnsToEvaluate.outputofsubsidised = @(aprime,a,z1,z2,agentmass, alpha,gamma,r,w,taurate,subsidyrate) (z2<0)*((1-((z2>=0)*taurate+(z2<0)*subsidyrate)*z2))^((alpha+gamma)/(1-gamma-alpha))*z1^(1/(1-gamma-alpha)) *(alpha/r)^(alpha/(1-gamma-alpha)) *(gamma/w)^(gamma/(1-gamma-alpha));
 
-AggValues=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, [], simoptions, EntryExitParamNames);
+AggValues=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions, EntryExitParamNames);
 
 Output.Y=AggValues.output.Aggregate;
 Output.N=AggValues.nbar.Aggregate;

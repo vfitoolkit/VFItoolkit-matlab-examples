@@ -106,7 +106,7 @@ Params.zeta=1-ExitPolicy;
 
 % Check that everything is working so far by solving the simulation of agent distribution to get the stationary distribution.
 simoptions % Show which options are being set
-StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_z,pi_z, simoptions,Params,EntryExitParamNames);
+StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_z,pi_z,simoptions,Params,EntryExitParamNames);
 
 % Note: When using models, such as entry and exit, where the mass of agents is not equal to 1
 % the toolkit will automatically keep track of distributions as StationaryDist.pdf and StationaryDist.mass
@@ -145,7 +145,7 @@ GEPriceParamNames={'ce','Ne'};
 FnsToEvaluate.Y = @(aprime,a,z,agentmass,alpha) z*(aprime^alpha); % Real output
 
 % Just to test: (note, is same command as usual, just need to include the optional extra inputs 'simoptions' and 'EntryExitParamNames' which contains all the needed info about entry/exit)
-AggVars=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, [], simoptions,EntryExitParamNames);
+AggVars=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions,EntryExitParamNames);
 
 % The general equilibrium condition is that the EV^e-ce=0.
 % This does not fit standard format for general equilibrium conditions.
@@ -188,9 +188,9 @@ FnsToEvaluate2.Firing = @(aprime,a,z) -(aprime-a*(a~=10^6))*(aprime<a*(a~=10^6))
 % name and appear immediately after z as an input (before any other parameters)
 
 % We will want the aggregate values of these. 
-AggValues=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate2, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, [], simoptions,EntryExitParamNames);
+AggValues=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate2, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions,EntryExitParamNames);
 % For much of Panel B we just need the pdf of the relevant measure (employment, hiring, firing)
-ProbDensityFns=EvalFnOnAgentDist_pdf_Case1(StationaryDist, Policy, FnsToEvaluate2, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, [], simoptions,EntryExitParamNames);
+ProbDensityFns=EvalFnOnAgentDist_pdf_Case1(StationaryDist, Policy, FnsToEvaluate2, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions,EntryExitParamNames);
 % We need a simulated panel based on whole distributions (for calculating
 % variance of growth rates and serial correlation in log(n); for survivors).
 % Note that because of these two moments we want to calculate it makes more
