@@ -5,9 +5,7 @@
 % transition path in reposonse to a 'surprise' one off change in the
 % parameter beta (the time discount parameter).
 %
-% VFI Toolkit automatically detects hardware (GPU? Number of CPUs?) and
-% sets defaults accordingly. It will run without a GPU, but slowly. It is
-% indended for use with GPU.
+% Transition Path commands require a GPU.
 
 %% Set some basic variables
 
@@ -64,7 +62,7 @@ n_a=n_k;
 
 %%
 % Create functions to be evaluated
-FnsToEvaluate.K = @(aprime,a,s) a; %We just want the aggregate assets (which is this periods state)
+FnsToEvaluate.K = @(aprime,a,s) a; % We just want the aggregate assets (which is this periods state)
 
 % Now define the functions for the General Equilibrium conditions
     % Should be written as LHS of general eqm eqn minus RHS, so that the closer the value given by the function is to 
@@ -98,7 +96,7 @@ simoptions=struct(); % Use default options for solving for stationary distributi
 heteroagentoptions.verbose=1; % verbose means that you want it to give you feedback on what is going on
 
 fprintf('Calculating price vector corresponding to the stationary general eqm \n')
-[p_eqm_init,~,GeneralEqmCondn_init]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_z, 0, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions, simoptions, vfoptions);
+[p_eqm_init,GeneralEqmCondn_init]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_z, 0, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions, simoptions, vfoptions);
 
 p_eqm_init % The equilibrium values of the GE prices
 % Note: GeneralEqmCondn_init will be essentially zero, it is the value of the general equilibrium equation
@@ -119,7 +117,7 @@ Params.alpha=0.4;
 % Note: if the change in parameters affected pi_z this would need to be recalculated here.
 
 disp('Calculating price vector corresponding to the final stationary eqm')
-[p_eqm_final,~,GeneralEqmCondn_final]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_z, 0, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions, simoptions, vfoptions);
+[p_eqm_final,GeneralEqmCondn_final]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_z, 0, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions, simoptions, vfoptions);
 
 p_eqm_final % The equilibrium values of the GE prices
 % Note: GeneralEqmCondn_final will be essentially zero, it is the value of the general equilibrium equation
@@ -141,7 +139,8 @@ AggVars_final=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_final, Policy_final
 % it will cause problems, too high just means run-time will be longer).
 T=150
 
-% We want to look at a one off unanticipated change of beta. ParamPath & PathParamNames are thus given by
+% We want to look at a one off unanticipated change of alpha [not necessarily a sensible 'reform', but shows how we can do these transition paths]
+% ParamPath & PathParamNames are thus given by
 ParamPath.alpha=0.4*ones(T,1); % For each parameter that changes value, ParamPath is matrix of size T-by-1
 % (the way ParamPath is set is designed to allow for a series of changes in the parameters)
 
@@ -157,7 +156,7 @@ transpathoptions.GEnewprice=3;
 % Need to explain to transpathoptions how to use the GeneralEqmEqns to
 % update the general eqm transition prices (in PricePath).
 transpathoptions.GEnewprice3.howtoupdate=... % a row is: GEcondn, price, add, factor
-    {'CaptialMarket','r',0,0.1}; % CaptialMarket GE condition will be positive if r is too big, so subtract
+    {'CaptialMarket','r',0,0.2}; % CaptialMarket GE condition will be positive if r is too big, so subtract
 % Note: the update is essentially new_price=price+factor*add*GEcondn_value-factor*(1-add)*GEcondn_value
 % Notice that this adds factor*GEcondn_value when add=1 and subtracts it what add=0
 % A small 'factor' will make the convergence to solution take longer, but too large a value will make it 
@@ -170,7 +169,7 @@ transpathoptions.GEnewprice3.howtoupdate=... % a row is: GEcondn, price, add, fa
 transpathoptions.weightscheme=1;
 transpathoptions.verbose=1;
 
-PricePath=TransitionPath_Case1(PricePath0, ParamPath, T, V_final, StationaryDist_init, n_d, n_a, n_z, pi_z, d_grid,a_grid,z_grid, ReturnFn, FnsToEvaluate, TransPathGeneralEqmEqns, Params, DiscountFactorParamNames, transpathoptions);
+[PricePath,GeneralEqmCondnPath]=TransitionPath_Case1(PricePath0, ParamPath, T, V_final, StationaryDist_init, n_d, n_a, n_z, pi_z, d_grid,a_grid,z_grid, ReturnFn, FnsToEvaluate, TransPathGeneralEqmEqns, Params, DiscountFactorParamNames, transpathoptions);
 
 figure(1)
 plot(0:1:T, [p_eqm_init.r;PricePath.r])
@@ -181,7 +180,7 @@ title('interest rate path for transtion')
 
 AgentDistPath=AgentDistOnTransPath_Case1(StationaryDist_init, PolicyPath,n_d,n_a,n_z,pi_z,T,simoptions);
 
-AggVarsPath=EvalFnOnTransPath_AggVars_Case1(FnsToEvaluate,AgentDistPath,PolicyPath,PricePath,ParamPath, Params, T, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid,simoptions);
+AggVarsPath=EvalFnOnTransPath_AggVars_Case1(FnsToEvaluate,AgentDistPath,PolicyPath,PricePath,ParamPath, Params, T, n_d, n_a, n_z, d_grid, a_grid,z_grid,simoptions);
 
 figure(2)
 plot(0:1:T, [AggVars_init.K.Mean, AggVarsPath.K.Mean])
