@@ -151,8 +151,8 @@ disp('Calculating various equilibrium objects')
 
 StationaryDist_initial=StationaryDist_Case1(Policy_initial,n_d,n_a,n_z,pi_z);
 
-AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_initial, Policy_initial, FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid);
-    
+AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_initial, Policy_initial, FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid,heteroagentoptions);
+
 % save ./SavedOutput/GuerrieriLorenzoni2017_initial.mat Params p_eqm_initial Policy_initial StationaryDist_initial AggVars_initial n_d n_a n_z
 
 % Some things you might want to take a look at just to see what is going on.
@@ -178,7 +178,7 @@ Params.r=p_eqm_final.r;
 
 StationaryDist_final=StationaryDist_Case1(Policy_final,n_d,n_a,n_z,pi_z);
 
-AggVars_final=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_final, Policy_final, FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid);
+AggVars_final=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_final, Policy_final, FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid, heteroagentoptions);
 
 % save ./SavedOutput/GuerrieriLorenzoni2017_final.mat Params p_eqm_final p_eqm_index_final MarketClearance_final V_final Policy_final StationaryDist_final AggVars_final n_d n_a n_z
 
@@ -197,8 +197,8 @@ AggVars_final=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_final, Policy_final
 % Following few lines do this (together with multiplication by 4 to make it annual)
 FnsToEvaluateExtra.Output = @(d, aprime,a,z) d*z; % Output
 
-QuarterlyOutput_initial=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_initial, Policy_initial, FnsToEvaluateExtra,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid,2);
-QuarterlyOutput_final=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_final, Policy_final, FnsToEvaluateExtra,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid,2);
+QuarterlyOutput_initial=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_initial, Policy_initial, FnsToEvaluateExtra,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid,heteroagentoptions);
+QuarterlyOutput_final=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_final, Policy_final, FnsToEvaluateExtra,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid,heteroagentoptions);
 
 AnnualOutput_initial=4*QuarterlyOutput_initial.Output.Mean;
 AnnualOutput_final=4*QuarterlyOutput_final.Output.Mean;
