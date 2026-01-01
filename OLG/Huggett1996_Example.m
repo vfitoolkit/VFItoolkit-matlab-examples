@@ -213,7 +213,7 @@ GeneralEqmEqns.Bequests = @(T,Beq,n) T-Beq/(1+n); % Lump-sum transfers equal Acc
 %% Test
 disp('Test AggVars')
 tic;
-AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], 0, n_a, n_z,N_j, 0, a_grid, z_grid);
+AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], 0, n_a, n_z,N_j, 0, a_grid, z_grid, simoptions);
 toc
 
 %% Solve for the General Equilibrium
@@ -273,26 +273,26 @@ end
 AggregateWealthTransers=sum(Params.mewj.*AggregateWealthTransers);
 % Total wealth
 FnsToEvaluate.TotalWealth = @(aprime,a,z) a;
-AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], 0, n_a, n_z,N_j, 0, a_grid, z_grid);
+AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], 0, n_a, n_z,N_j, 0, a_grid, z_grid, simoptions);
 % Transfer Wealth Ratio
 TransferWealthRatio=AggregateWealthTransers/AggVars.TotalWealth.Mean;
 
 
 % Calculate fraction of population with zero or negative wealth
 FnsToEvaluate.ZeroOrNegAssets = @(aprime,a,z) (a<=0); % Indicator for ZeroOrNegAssets
-AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], 0, n_a, n_z,N_j, 0, a_grid, z_grid);
+AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], 0, n_a, n_z,N_j, 0, a_grid, z_grid, simoptions);
 FractionWithZeroOrNegAssets=100*AggVars.ZeroOrNegAssets.Mean;
 
 % Calculate wealth lorenz curve (and thus all percentile shares) and also
 % the that for earnings (in text at bottom of pg 480, top of pg 481, there
 % are a bunch of descriptions of model earnings, conditional on working age)
 FnsToEvaluate.Wealth = @(aprime,a,z) a; % Notice that wealth is just the same as aggregate assets. I am going to evaluate it again anyway but this is total overkill.
-AllStats=EvalFnOnAgentDist_AllStats_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], 0, n_a, n_z,N_j, 0, a_grid, z_grid);
+AllStats=EvalFnOnAgentDist_AllStats_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], 0, n_a, n_z,N_j, 0, a_grid, z_grid, simoptions);
 TopWealthShares=100*(1-AllStats.Wealth.LorenzCurve([80,95,99],1)); % Need the 20,5, and 1 top shares for Tables of Huggett (1996)
 % Calculate the wealth gini
 WealthGini=Gini_from_LorenzCurve(AllStats.Wealth.LorenzCurve);
 
-AgeConditionalStats=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvaluate,Params,[],0,n_a,n_z,N_j,0,a_grid,z_grid);
+AgeConditionalStats=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvaluate,Params,[],0,n_a,n_z,N_j,0,a_grid,z_grid, simoptions);
 
 %% Draw figures from Huggett (1996)
 
