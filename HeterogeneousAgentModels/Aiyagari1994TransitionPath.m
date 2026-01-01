@@ -169,7 +169,7 @@ transpathoptions.GEnewprice3.howtoupdate=... % a row is: GEcondn, price, add, fa
 transpathoptions.weightscheme=1;
 transpathoptions.verbose=1;
 
-[PricePath,GeneralEqmCondnPath]=TransitionPath_Case1(PricePath0, ParamPath, T, V_final, StationaryDist_init, n_d, n_a, n_z, pi_z, d_grid,a_grid,z_grid, ReturnFn, FnsToEvaluate, TransPathGeneralEqmEqns, Params, DiscountFactorParamNames, transpathoptions);
+[PricePath,GeneralEqmCondnPath]=TransitionPath_Case1(PricePath0, ParamPath, T, V_final, StationaryDist_init, n_d, n_a, n_z, pi_z, d_grid,a_grid,z_grid, ReturnFn, FnsToEvaluate, TransPathGeneralEqmEqns, Params, DiscountFactorParamNames, transpathoptions,vfoptions,simoptions);
 
 figure(1)
 plot(0:1:T, [p_eqm_init.r;PricePath.r])
