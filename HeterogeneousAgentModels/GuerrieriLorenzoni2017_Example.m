@@ -335,7 +335,7 @@ title('borrowing constraint')
 subplot(2,2,2); plot(0:1:T,[AggVars_initial.debt.Mean./AggVars_initial.output.Mean, AggVarsPath.debt.Mean./AggVarsPath.output.Mean])
 title('household debt-to-annual-GDP ratio')
 % interest rate
-subplot(2,2,3); plot(0:1:T,100*(((1+[p_eqm_initial.r, PricePath.r]).^4)-1)) % converts to annual rate by compounding (not just multiplying by 4)
+subplot(2,2,3); plot(0:1:T,100*(((1+[p_eqm_initial.r; PricePath.r]).^4)-1)) % converts to annual rate by compounding (not just multiplying by 4)
 title('annual interest rate')
 % output
 subplot(2,2,4); plot(0:1:T,100*Output_pch) % 100* to present one percentage point as 1
@@ -351,7 +351,7 @@ title('borrowing constraint as fraction-of-initial-annual-output')
 subplot(2,2,2); plot(0:1:T,[AggVars_initial.debt.Mean, AggVarsPath.debt.Mean]./AggVars_initial.output.Mean)
 title('household debt-to-initial-annual-GDP ratio')
 % interest rate
-subplot(2,2,3); plot(0:1:T,100*4*[p_eqm_initial.r, PricePath.r]) % converts to annual rate by compounding (not just multiplying by 4)
+subplot(2,2,3); plot(0:1:T,100*4*[p_eqm_initial.r; PricePath.r]) % converts to annual rate by compounding (not just multiplying by 4)
 title('annual interest rate')
 % output
 subplot(2,2,4); plot(0:1:T,100*Output_pch) % 100* to present one percentage point as 1
