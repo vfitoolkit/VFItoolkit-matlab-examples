@@ -19,14 +19,19 @@
 
 %% To translate Guerrieri & Lorenzoni (2017) into the standard setup of VFI Toolkit I use following:
 % d variables: n_it
-% aprime variables: b_it+1
+% aprime variables: b_{i,t+1}
 % a variables: b_it
 % z variables: theta_it, e_it
 
 %% Number of grid points
 n_d=51; % Endogenous labor 
-n_a=801; % Assets
+n_a=351; % Assets
 n_theta=13;
+
+vfoptions.gridinterplayer=1;
+vfoptions.ngridinterp=25; % # points on next period endogenous state, between every two consecutive points in the grid on the endogenous state
+simoptions.gridinterplayer=vfoptions.gridinterplayer;
+simoptions.ngridinterp=vfoptions.ngridinterp;
 
 %% Parameters
 % (mostly from G&L2017, Table 1)
@@ -125,6 +130,7 @@ DiscountFactorParamNames={'beta'};
 
 ReturnFn=@(d,aprime,a,z, r, gamma, psi, eta, phi, v,B,Bprime,omega) GuerrieriLorenzoni2017_ReturnFn(d,aprime,a,z, r, gamma, psi, eta, phi, v,B,Bprime,omega);
 
+
 %% Solve the initial stationary equilibrium
 % GL2007 refer to this as the initial steady-state equilibrium, which it is not. It is the inital stationary equilibrium. (there are plenty of shocks at the idiosyncratic level, hence not steady-state which means the absence of shocks)
 % Comment: The 'steady-state equilibrium' is standard in literature, but I personally consider it misleading and 
@@ -132,28 +138,26 @@ ReturnFn=@(d,aprime,a,z, r, gamma, psi, eta, phi, v,B,Bprime,omega) GuerrieriLor
 % [Relatedly: there is a difference in a Representative Agent DSGE between the steady-state value and the mean 
 % value of the model with shocks! Think carefully about why this is and you will understand my insistence of use 
 % of stationary rather than steady-state language.]
-vfoptions.gridinterplayer=1; vfoptions.ngridinterp=25; vfoptions.divideandconquer=1; simoptions.gridinterplayer=vfoptions.gridinterplayer; simoptions.ngridinterp=vfoptions.ngridinterp;
+
 %Use the toolkit to find the equilibrium price index
 GEPriceParamNames={'r'}; %,'tau'
 
 heteroagentoptions.verbose=1;
 disp('Calculating price vector corresponding to the stationary eqm')
-[p_eqm_initial,~, GeneralEqmCondn_initial]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_z, 0, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions,simoptions,vfoptions);
+[p_eqm_initial,GeneralEqmCondn_initial]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_z, 0, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions,vfoptions,simoptions);
 Params.r=p_eqm_initial.r;
 
 
 %% Now that we know what the equilibrium price is, lets calculate a bunch of other things associated with the equilibrium
 
 disp('Calculating various equilibrium objects')
-[~,Policy_initial]=ValueFnIter_Case1(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
+[~,Policy_initial]=ValueFnIter_Case1(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [],vfoptions);
 
-% PolicyValues=PolicyInd2Val_Case1(Policy,n_d,n_a,n_s,d_grid,a_grid);
+% PolicyValues=PolicyInd2Val_Case1(Policy,n_d,n_a,n_s,d_grid,a_grid,vfoptions);
 
-StationaryDist_initial=StationaryDist_Case1(Policy_initial,n_d,n_a,n_z,pi_z);
+StationaryDist_initial=StationaryDist_Case1(Policy_initial,n_d,n_a,n_z,pi_z,simoptions);
 
-AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_initial, Policy_initial, FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid, simoptions);
-    
-% save ./SavedOutput/GuerrieriLorenzoni2017_initial.mat Params p_eqm_initial Policy_initial StationaryDist_initial AggVars_initial n_d n_a n_z
+AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_initial, Policy_initial, FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid,simoptions);
 
 % Some things you might want to take a look at just to see what is going on.
 % p_eqm_initial
@@ -169,52 +173,41 @@ AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_initial, Policy_i
 %% Final stationary equilibrium
 Params.phi=Params.phi_final;
 
-[p_eqm_final,~,GeneralEqmCondn_final]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_z, 0, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions,simoptions,vfoptions);
+[p_eqm_final,GeneralEqmCondn_final]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_z, 0, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions,vfoptions,simoptions);
 
 Params.r=p_eqm_final.r;
 [V_final,Policy_final]=ValueFnIter_Case1(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
 
-% PolicyValues=PolicyInd2Val_Case1(Policy,n_d,n_a,n_s,d_grid,a_grid);
+% PolicyValues=PolicyInd2Val_Case1(Policy,n_d,n_a,n_s,d_grid,a_grid,vfoptions);
 
-StationaryDist_final=StationaryDist_Case1(Policy_final,n_d,n_a,n_z,pi_z);
+StationaryDist_final=StationaryDist_Case1(Policy_final,n_d,n_a,n_z,pi_z,simoptions);
 
-AggVars_final=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_final, Policy_final, FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid, simoptions);
-
-% save ./SavedOutput/GuerrieriLorenzoni2017_final.mat Params p_eqm_final p_eqm_index_final MarketClearance_final V_final Policy_final StationaryDist_final AggVars_final n_d n_a n_z
+AggVars_final=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_final, Policy_final, FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid,simoptions);
 
 %% Compute Annual GDP
 
-% GL2017 describe Figure 1 as "Figure I shows the optimal values of
-% consumption and labor supply as a function of the initial level of bond
-% holdings". This is incorrect. The x-axis is not the level of bond holdings, it is
-% bond-holdings as a fraction of annual output. I follow GL2017 in what
-% they plot, adding the footnote to bottom of figure to explain what is
-% actually graphed.
-% In fact this is true of many of the Figures of GL2017, which label the
-% x-axis as either b or B, but are in fact reporting b (or B) divided by
-% annual output.
-% To do this I need to compute annual GDP: quarterly output is y=theta*n.
-% Following few lines do this (together with multiplication by 4 to make it annual)
+% GL2017 describe Figure 1 as "Figure I shows the optimal values of consumption and labor supply as a function of the initial level of bond
+% holdings". This is incorrect. The x-axis is not the level of bond holdings, it is bond-holdings as a fraction of annual output. I follow GL2017 in what
+% they plot, adding the footnote to bottom of figure to explain what is actually graphed.
+% In fact this is true of many of the Figures of GL2017, which label the x-axis as either b or B, but are in fact reporting b (or B) divided by
+% annual output. To do this I need to compute annual GDP: quarterly output is y=theta*n. Following few lines do this (together with multiplication by 4 to make it annual)
 FnsToEvaluateExtra.Output = @(d, aprime,a,z) d*z; % Output
 
-QuarterlyOutput_initial=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_initial, Policy_initial, FnsToEvaluateExtra,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid, simoptions);
-QuarterlyOutput_final=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_final, Policy_final, FnsToEvaluateExtra,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid, simoptions);
+QuarterlyOutput_initial=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_initial, Policy_initial, FnsToEvaluateExtra,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid,simoptions);
+QuarterlyOutput_final=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_final, Policy_final, FnsToEvaluateExtra,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid,simoptions);
 
 AnnualOutput_initial=4*QuarterlyOutput_initial.Output.Mean;
 AnnualOutput_final=4*QuarterlyOutput_final.Output.Mean;
 
 %% Figure 1
-l_a=length(n_a);
-l_z=length(n_z);
+
 % We want to plot consumption, first set up a function that returns the value of consumption
 Fig1FnsToEvaluate.Consumption = @(d, aprime,a,z,r, v, B, Bprime) GuerrieriLorenzoni2017_ConsumptionFn(d, aprime, a, z,r, v, B, Bprime); % Consumption
-
 % Now evaluate it on the grid
-ValuesOnGrid=EvalFnOnAgentDist_ValuesOnGrid_Case1(Policy_initial, Fig1FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions);
-ConsumptionDecision=ValuesOnGrid.Consumption;
+ValuesOnGrid=EvalFnOnAgentDist_ValuesOnGrid_Case1(Policy_initial, Fig1FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid,simoptions);
 
 figure(1)
-subplot(2,1,1); plot(a_grid,ConsumptionDecision(:,2),a_grid,ConsumptionDecision(:,8))
+subplot(2,1,1); plot(a_grid,ValuesOnGrid.Consumption(:,2),a_grid,ValuesOnGrid.Consumption(:,8))
 % legend('Mean','10th','25th','Median')
 title({'Consumption'})
 xlabel('Bond holdings')
@@ -226,7 +219,7 @@ xlabel('Bond holdings')
 % saveas(gcf,['./SavedOutput/Graphs/GuerrieriLorenzoni_Figure1.pdf'])
 
 % Now a version that reproduces GL2017 exactly
-subplot(2,1,1); plot(a_grid/AnnualOutput_initial,ConsumptionDecision(:,2),a_grid/AnnualOutput_initial,ConsumptionDecision(:,8))
+subplot(2,1,1); plot(a_grid/AnnualOutput_initial,ValuesOnGrid.Consumption(:,2),a_grid/AnnualOutput_initial,ValuesOnGrid.Consumption(:,8))
 % legend('Mean','10th','25th','Median')
 title({'Consumption'})
 xlabel('Bond holdings as fraction of annual output')
@@ -262,19 +255,6 @@ title('bond distribution')
 legend('Initial Steady State','Final Steady State');
 % saveas(gcf,['./SavedOutput/Graphs/GuerrieriLorenzoni_Figure4_GL2017.pdf'])
 
-
-%%
-% Free up space on gpu
-clear ConsumptionDecision
-% clear Policy_initial
-clear PolicyValues PolicyValuesPermute
-clear StationaryDist_final
-
-% load ./SavedOutput/GuerrieriLorenzoni2017_final.mat V_final
-% load ./SavedOutput/GuerrieriLorenzoni2017_initial.mat StationaryDist_initial
-
-% [GeneralEqmCondn_initial , GeneralEqmCondn_final]
-
 %% Compute the transition path
 % For this we need the following extra objects: PricePathOld, PriceParamNames, ParamPath, ParamPathNames, T, V_final, StationaryDist_init
 % (already calculated V_final & StationaryDist_init above)
@@ -284,12 +264,12 @@ clear StationaryDist_final
 T=150
 
 % We want to look at a one off unanticipated path of phi. ParamPath & PathParamNames are thus given by
-ParamPath.phi=Params.phi_final*ones(T,1); % ParamPath is matrix of size T-by-'number of parameters that change over path'
+ParamPath.phi=Params.phi_final*ones(1,T); % ParamPath is matrix of size 'number of parameters that change over path'-by-T
 temp=linspace(Params.phi_initial,Params.phi_final,7); ParamPath.phi(1:6)=temp(2:7); % At t=0, is inital stationary distribution, then falls over the following 6 periods to equal 0.525, remains there
 % (the way ParamPath is set is designed to allow for a series of changes in the parameters)
 
 % We need to give an initial guess for the price path on interest rates
-PricePath0.r=[linspace(-0.01, p_eqm_final.r, floor(T/3))'; p_eqm_final.r*ones(T-floor(T/3),1)]; % For each price/parameter that will be determined in general eqm over transition path PricePath0 is matrix of size T-by-1
+PricePath0.r=[linspace(-0.01, p_eqm_final.r, floor(T/3)), p_eqm_final.r*ones(1,T-floor(T/3))]; % For each price/parameter that will be determined in general eqm over transition path PricePath0 is matrix of size 1-by-T
 
 % Rewrite the aggregate variable to be next period bonds rather than
 % current bonds as this is the actual timing of the decision which the
@@ -310,26 +290,29 @@ transpathoptions.GEnewprice3.howtoupdate=... % a row is: GEcondn, price, add, fa
 % A small 'factor' will make the convergence to solution take longer, but too large a value will make it 
 % unstable (fail to converge). Technically this is the damping factor in a shooting algorithm.
 
-% NOTE TO SELF: 0.01 seems to big, 0.0001 may be to small. Might be better with 0.001
+% NOTE TO SELF: 0.01 seems too big, 0.0001 may be too small. Might be better with 0.001
 
 % Now just run the TransitionPath_Case1 command (all of the other inputs
 % are things we had already had to define to be able to solve for the
 % initial and final equilibria)
 transpathoptions.weightscheme=1;
-transpathoptions.verbose=1
+transpathoptions.verbose=1;
 
-PricePath=TransitionPath_Case1(PricePath0, ParamPath, T, V_final, StationaryDist_initial, n_d, n_a, n_z, pi_z, d_grid,a_grid,z_grid, ReturnFn, FnsToEvaluate, TransPathGeneralEqmEqns, Params, DiscountFactorParamNames, transpathoptions,vfoptions,simoptions);
+% For transition paths we want to use divide-and-conquer, so create an alternative version of vfoptions for these
+vfoptionspath=vfoptions;
+vfoptionspath.divideandconquer=1;
 
-% save ./SavedOutput/GuerrieriLorenzoni2017_transpath1.mat PricePath n_d n_a n_z
+[PricePath,GeneralEqmCondnPath]=TransitionPath_Case1(PricePath0, ParamPath, T, V_final, StationaryDist_initial, n_d, n_a, n_z, pi_z, d_grid,a_grid,z_grid, ReturnFn, FnsToEvaluate, TransPathGeneralEqmEqns, Params, DiscountFactorParamNames, transpathoptions, vfoptionspath, simoptions);
 
 % For later we will keep another copy
 PricePath_Flex=PricePath;
 
 % Now that we have the transition, calculate the value and policy functions for the transition path
-[VPath,PolicyPath]=ValueFnOnTransPath_Case1(PricePath, ParamPath, T, V_final, Policy_final, Params, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, transpathoptions,vfoptions);
+[VPath,PolicyPath]=ValueFnOnTransPath_Case1(PricePath, ParamPath, T, V_final, Policy_final, Params, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, transpathoptions, vfoptionspath);
 % You can then use these to calculate the agent distribution for the transition path
-AgentDistPath=AgentDistOnTransPath_Case1(StationaryDist_initial,PolicyPath,n_d,n_a,n_z,pi_z,T);
+AgentDistPath=AgentDistOnTransPath_Case1(StationaryDist_initial,PolicyPath,n_d,n_a,n_z,pi_z,T,simoptions);
 
+save GL2017A.mat
 
 %% Figure 3
 % load ./SavedOutput/GuerrieriLorenzoni2017_initial.mat
@@ -339,20 +322,20 @@ AgentDistPath=AgentDistOnTransPath_Case1(StationaryDist_initial,PolicyPath,n_d,n
 Fig3FnsToEvaluate.output = @(d, aprime,a,z) d*z; % y_it=n_it*theta_it Note that since gov budget is balanced every period it neither adds nor subtracts (unemployment benefits + interest payments on B=lump-sum tax revenue)
 Fig3FnsToEvaluate.debt = @(d, aprime,a,z) -a*(a<0); % debt is (minus of) negative assets
 
-AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_initial, Policy_initial, Fig3FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid, simoptions);
-AggVarsPath=EvalFnOnTransPath_AggVars_Case1(Fig3FnsToEvaluate,AgentDistPath,PolicyPath,PricePath,ParamPath, Params, T, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames,simoptions);
+AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_initial, Policy_initial, Fig3FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid,simoptions);
+AggVarsPath=EvalFnOnTransPath_AggVars_Case1(Fig3FnsToEvaluate,AgentDistPath,PolicyPath,PricePath,ParamPath, Params, T, n_d, n_a, n_z, d_grid, a_grid,z_grid,simoptions);
 
-Output_pch=([AggVars_initial.output.Mean; AggVarsPath.output.Mean]-AggVars_initial.output.Mean)/AggVars_initial.output.Mean;
+Output_pch=([AggVars_initial.output.Mean, AggVarsPath.output.Mean]-AggVars_initial.output.Mean)/AggVars_initial.output.Mean;
 
 figure(3)
 % Borrowing limit
-subplot(2,2,1); plot(0:1:T,[Params.phi_initial; ParamPath.phi])
+subplot(2,2,1); plot(0:1:T,[Params.phi_initial, ParamPath.phi])
 title('borrowing constraint')
 % household debt-to-GDP ratio
-subplot(2,2,2); plot(0:1:T,[AggVars_initial.debt.Mean./AggVars_initial.output.Mean; AggVarsPath.debt.Mean./AggVarsPath.output.Mean])
+subplot(2,2,2); plot(0:1:T,[AggVars_initial.debt.Mean./AggVars_initial.output.Mean, AggVarsPath.debt.Mean./AggVarsPath.output.Mean])
 title('household debt-to-annual-GDP ratio')
 % interest rate
-subplot(2,2,3); plot(0:1:T,100*(((1+[p_eqm_initial.r; PricePath.r]).^4)-1)) % converts to annual rate by compounding (not just multiplying by 4)
+subplot(2,2,3); plot(0:1:T,100*(((1+[p_eqm_initial.r, PricePath.r]).^4)-1)) % converts to annual rate by compounding (not just multiplying by 4)
 title('annual interest rate')
 % output
 subplot(2,2,4); plot(0:1:T,100*Output_pch) % 100* to present one percentage point as 1
@@ -362,13 +345,13 @@ title('output')
 
 % Now a version that reproduces GL2017 exactly.
 % Borrowing limit
-subplot(2,2,1); plot(0:1:T,[Params.phi_initial; ParamPath.phi]./AnnualOutput_initial)
+subplot(2,2,1); plot(0:1:T,[Params.phi_initial, ParamPath.phi]./AnnualOutput_initial)
 title('borrowing constraint as fraction-of-initial-annual-output')
 % household debt-to-GDP ratio
-subplot(2,2,2); plot(0:1:T,[AggVars_initial.debt.Mean; AggVarsPath.debt.Mean]./AggVars_initial.output.Mean)
+subplot(2,2,2); plot(0:1:T,[AggVars_initial.debt.Mean, AggVarsPath.debt.Mean]./AggVars_initial.output.Mean)
 title('household debt-to-initial-annual-GDP ratio')
 % interest rate
-subplot(2,2,3); plot(0:1:T,100*4*[p_eqm_initial.r; PricePath.r]) % converts to annual rate by compounding (not just multiplying by 4)
+subplot(2,2,3); plot(0:1:T,100*4*[p_eqm_initial.r, PricePath.r]) % converts to annual rate by compounding (not just multiplying by 4)
 title('annual interest rate')
 % output
 subplot(2,2,4); plot(0:1:T,100*Output_pch) % 100* to present one percentage point as 1
@@ -379,25 +362,25 @@ subplot(2,2,4); plot(0:1:T,100*Output_pch) % 100* to present one percentage poin
 %% Figure 5
 Fig5FnsToEvaluate.Consumption = @(d, aprime,a,z,r, v, B, Bprime) GuerrieriLorenzoni2017_ConsumptionFn(d, aprime, a, z,r, v, B, Bprime); % Consumption
 
-AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_initial, Policy_initial, Fig5FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid, simoptions);
-AggVarsPath_GE=EvalFnOnTransPath_AggVars_Case1(Fig5FnsToEvaluate,AgentDistPath,PolicyPath,PricePath, ParamPath, Params, T, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, transpathoptions);
+AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_initial, Policy_initial, Fig5FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid,simoptions);
+AggVarsPath_GE=EvalFnOnTransPath_AggVars_Case1(Fig5FnsToEvaluate,AgentDistPath,PolicyPath,PricePath, ParamPath, Params, T, n_d, n_a, n_z, d_grid, a_grid,z_grid,simoptions);
 % Only debt limit reduction path
-UnchangedPricePath.r=p_eqm_initial.r*ones(T,1);
-[~,PolicyPath_partial_onlydebtlimit]=ValueFnOnTransPath_Case1(UnchangedPricePath, ParamPath, T, V_final, Policy_final, Params, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, transpathoptions,vfoptions);
+UnchangedPricePath.r=p_eqm_initial.r*ones(1,T);
+[~,PolicyPath_partial_onlydebtlimit]=ValueFnOnTransPath_Case1(UnchangedPricePath, ParamPath, T, V_final, Policy_final, Params, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, transpathoptions,vfoptionspath);
 AgentDistPath_partial_onlydebtlimit=AgentDistOnTransPath_Case1(StationaryDist_initial, PolicyPath_partial_onlydebtlimit,n_d,n_a,n_z,pi_z,T,simoptions);
-AggVarsPath_partial_onlydebtlimit=EvalFnOnTransPath_AggVars_Case1(Fig5FnsToEvaluate,AgentDistPath_partial_onlydebtlimit,PolicyPath_partial_onlydebtlimit,UnchangedPricePath, ParamPath, Params, T, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, simoptions);
+AggVarsPath_partial_onlydebtlimit=EvalFnOnTransPath_AggVars_Case1(Fig5FnsToEvaluate,AgentDistPath_partial_onlydebtlimit,PolicyPath_partial_onlydebtlimit,UnchangedPricePath, ParamPath, Params, T, n_d, n_a, n_z, d_grid, a_grid,z_grid, simoptions);
 % Only interest rate path
-UnchangedParamPath.phi=Params.phi_initial*ones(T,1);
-[~,PolicyPath_partial_onlyinterestrate]=ValueFnOnTransPath_Case1(PricePath, UnchangedParamPath, T, V_final, Policy_final, Params, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, vfoptions);
+UnchangedParamPath.phi=Params.phi_initial*ones(1,T);
+[~,PolicyPath_partial_onlyinterestrate]=ValueFnOnTransPath_Case1(PricePath, UnchangedParamPath, T, V_final, Policy_final, Params, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, transpathoptions,vfoptionspath);
 AgentDistPath_partial_onlyinterestrate=AgentDistOnTransPath_Case1(StationaryDist_initial, PolicyPath_partial_onlyinterestrate,n_d,n_a,n_z,pi_z,T,simoptions);
-AggVarsPath_partial_onlyinterestrate=EvalFnOnTransPath_AggVars_Case1(Fig5FnsToEvaluate,AgentDistPath_partial_onlyinterestrate,PolicyPath_partial_onlyinterestrate,PricePath, UnchangedParamPath, Params, T, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, simoptions);
+AggVarsPath_partial_onlyinterestrate=EvalFnOnTransPath_AggVars_Case1(Fig5FnsToEvaluate,AgentDistPath_partial_onlyinterestrate,PolicyPath_partial_onlyinterestrate,PricePath, UnchangedParamPath, Params, T, n_d, n_a,n_z, d_grid, a_grid,z_grid, simoptions);
 
 AggVarsPath_GE_pch=100*(AggVarsPath_GE.Consumption.Mean-AggVars_initial.Consumption.Mean)./AggVars_initial.Consumption.Mean;
 AggVarsPath_partial_onlydebtlimit_pch=100*(AggVarsPath_partial_onlydebtlimit.Consumption.Mean-AggVars_initial.Consumption.Mean)./AggVars_initial.Consumption.Mean;
 AggVarsPath_partial_onlyinterestrate_pch=100*(AggVarsPath_partial_onlyinterestrate.Consumption.Mean-AggVars_initial.Consumption.Mean)./AggVars_initial.Consumption.Mean;
 
 figure(5)
-plot(0:1:T,[0;AggVarsPath_GE_pch], 0:1:T,[0;AggVarsPath_partial_onlydebtlimit_pch], 0:1:T,[0;AggVarsPath_partial_onlyinterestrate_pch])
+plot(0:1:T,[0,AggVarsPath_GE_pch], 0:1:T,[0,AggVarsPath_partial_onlydebtlimit_pch], 0:1:T,[0,AggVarsPath_partial_onlyinterestrate_pch])
 title('Consumption Response Deviation')
 legend('General eqm response','Partial eqm response to debt limit reduction','Partial eqm response to interest rate changes')
 % saveas(gcf,['./SavedOutput/Graphs/GuerrieriLorenzoni_Figure5.pdf'])
@@ -429,8 +412,8 @@ assetdist=cumsum(sum(StationaryDist_initial,2));
 InitialDist_1stpercentile=zeros(n_a,n_z,'gpuArray');
 InitialDist_1stpercentile(prctileindexes(1),:)=StationaryDist_initial(prctileindexes(1),:)./sum(StationaryDist_initial(prctileindexes(1),:)); % Normalized version of agents holding the 1st-percentile amount of assets, I make sure they have the appropriate distribution over the exogenous shock dimension.
 % Everything else is just completely standard
-AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(InitialDist_1stpercentile, Policy_initial, Fig6FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid);
-SimPanelValues=SimPanelValues_TransPath_Case1(PricePath, ParamPath, T, V_final, InitialDist_1stpercentile, n_d, n_a, n_z, pi_z, d_grid,a_grid,z_grid, ReturnFn, Fig6FnsToEvaluate, Params, DiscountFactorParamNames,simoptions, transpathoptions);
+AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(InitialDist_1stpercentile, Policy_initial, Fig6FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid,simoptions);
+SimPanelValues=SimPanelValues_TransPath_InfHorz(PolicyPath,PricePath, ParamPath, T, InitialDist_1stpercentile, n_d, n_a, n_z, pi_z, d_grid,a_grid,z_grid, Fig6FnsToEvaluate, Params, transpathoptions,simoptions);
 % The line in the figure is just the mean for each time period of these (I am guessing), but expressed as 
 % percent deviation from steady state. [Not obvious if I should take mean and then percent deviation, or 
 % take percent deviation and then mean; have gone with the former.]
@@ -439,17 +422,17 @@ Fig6_1stPercentileTrace=(mean(SimPanelValues.Consumption,2)-AggVars_initial.Cons
 % Now just repeat for 10th, 20th and 50th percentiles
 InitialDist_10thpercentile=zeros(n_a,n_z,'gpuArray');
 InitialDist_10thpercentile(prctileindexes(10),:)=StationaryDist_initial(prctileindexes(10),:)./sum(StationaryDist_initial(prctileindexes(10),:)); % Normalized version of agents holding the 1st-percentile amount of assets, I make sure they have the appropriate distribution over the exogenous shock dimension.
-AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(InitialDist_10thpercentile, Policy_initial, Fig6FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid, simoptions);
+AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(InitialDist_10thpercentile, Policy_initial, Fig6FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid);
 SimPanelValues=SimPanelValues_TransPath_Case1(PricePath, ParamPath, T, V_final, InitialDist_10thpercentile, n_d, n_a, n_z, pi_z, d_grid,a_grid,z_grid, ReturnFn, Fig6FnsToEvaluate, Params, DiscountFactorParamNames,simoptions, transpathoptions);
 Fig6_10thPercentileTrace=(mean(SimPanelValues.Consumption,2)-AggVars_initial.Consumption.Mean)/AggVars_initial.Consumption.Mean;
 InitialDist_20thpercentile=zeros(n_a,n_z,'gpuArray');
 InitialDist_20thpercentile(prctileindexes(20),:)=StationaryDist_initial(prctileindexes(20),:)./sum(StationaryDist_initial(prctileindexes(20),:)); % Normalized version of agents holding the 1st-percentile amount of assets, I make sure they have the appropriate distribution over the exogenous shock dimension.
-AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(InitialDist_20thpercentile, Policy_initial, Fig6FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid, simoptions);
+AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(InitialDist_20thpercentile, Policy_initial, Fig6FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid);
 SimPanelValues=SimPanelValues_TransPath_Case1(PricePath, ParamPath, T, V_final, InitialDist_20thpercentile, n_d, n_a, n_z, pi_z, d_grid,a_grid,z_grid, ReturnFn, Fig6FnsToEvaluate, Params, DiscountFactorParamNames,simoptions, transpathoptions);
 Fig6_20thPercentileTrace=(mean(SimPanelValues.Consumption,2)-AggVars_initial.Consumption.Mean)/AggVars_initial.Consumption.Mean;
 InitialDist_50thpercentile=zeros(n_a,n_z,'gpuArray');
 InitialDist_50thpercentile(prctileindexes(50),:)=StationaryDist_initial(prctileindexes(50),:)./sum(StationaryDist_initial(prctileindexes(50),:)); % Normalized version of agents holding the 1st-percentile amount of assets, I make sure they have the appropriate distribution over the exogenous shock dimension.
-AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(InitialDist_50thpercentile, Policy_initial, Fig6FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid, simoptions);
+AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(InitialDist_50thpercentile, Policy_initial, Fig6FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid);
 SimPanelValues=SimPanelValues_TransPath_Case1(PricePath, ParamPath, T, V_final, InitialDist_50thpercentile, n_d, n_a, n_z, pi_z, d_grid,a_grid,z_grid, ReturnFn, Fig6FnsToEvaluate, Params, DiscountFactorParamNames,simoptions,transpathoptions);
 Fig6_50thPercentileTrace=(mean(SimPanelValues.Consumption,2)-AggVars_initial.Consumption.Mean)/AggVars_initial.Consumption.Mean;
 
@@ -464,7 +447,7 @@ legend('1st percentile','10th percentile','20th percentile','50th percentile')
 Fig7FnsToEvaluate.Employment = @(d, aprime,a,z) d; %n_it in notation of GL2017
 
 Employment_initial=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_initial, Policy_initial, Fig7FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid,simoptions);
-EmploymentPath_GE=EvalFnOnTransPath_AggVars_Case1(Fig7FnsToEvaluate, AgentDistPath, PolicyPath,PricePath, ParamPath, Params, T, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, simoptions);
+EmploymentPath_GE=EvalFnOnTransPath_AggVars_Case1(Fig7FnsToEvaluate, AgentDistPath, PolicyPath,PricePath, ParamPath, Params, T, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames,transpathoptions);
 
 EmploymentPath_GE_pch=100*(EmploymentPath_GE.Employment.Mean-Employment_initial.Employment.Mean)./Employment_initial.Employment.Mean;
 
@@ -527,13 +510,15 @@ transpathoptions.GEnewprice3.howtoupdate=... % a row is: GEcondn, price, add, fa
 transpathoptions.weightscheme=1; % This is anyway the default
 transpathoptions.verbose=1;
 transpathoptions.tolerance=10^(-4); % will run until r and omega settle to four digits
-transpathoptions % show what the options have been set to
-PricePath_NK=TransitionPath_Case1(PricePath0, ParamPath, T, V_final, StationaryDist_initial, n_d, n_a, n_z, pi_z, d_grid,a_grid,z_grid, ReturnFn,  FnsToEvaluate, TransPathGeneralEqmEqns_sticky, Params, DiscountFactorParamNames, transpathoptions,vfoptions,simoptions);
+
+[PricePath_NK,GeneralEqmCondnPath_NK]=TransitionPath_Case1(PricePath0, ParamPath, T, V_final, StationaryDist_initial, n_d, n_a, n_z, pi_z, d_grid,a_grid,z_grid, ReturnFn,  FnsToEvaluate, TransPathGeneralEqmEqns_sticky, Params, DiscountFactorParamNames, transpathoptions, vfoptions, simoptions);
 
 % Now that we have the transition, calculate the value and policy functions for the transition path
-[VPath_NK,PolicyPath_NK]=ValueFnOnTransPath_Case1(PricePath_NK, ParamPath, T, V_final, Policy_final, Params, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, transpathoptions,vfoptions);
+[VPath_NK,PolicyPath_NK]=ValueFnOnTransPath_Case1(PricePath_NK, ParamPath, T, V_final, Policy_final, Params, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, transpathoptions, vfoptions);
 % You can then use these to calculate the agent distribution for the transition path
-AgentDistPath_NK=AgentDistOnTransPath_Case1(StationaryDist_initial, PolicyPath_NK,n_d,n_a,n_z,pi_z,T);
+AgentDistPath_NK=AgentDistOnTransPath_Case1(StationaryDist_initial, PolicyPath_NK,n_d,n_a,n_z,pi_z,T, simoptions);
+
+save GL2017B.mat
 
 
 %% Figure 8 (I do an additional Figure 17 that shows the 'wedges' and employment)
