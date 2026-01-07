@@ -338,7 +338,7 @@ fprintf('The percentage of population with zero or negative wealth is: %8.2f \n'
 FnsToEvaluate.Earnings = @(aprime,a,z,w,ybarj) w*exp(z+ybarj); % Earnings
 
 % options.agegroupings=1:1:N_j; % for each age, this is anyway the default
-AgeConditionalStats=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvaluate,Params,[],0,n_a,n_z,N_j,0,a_grid,z_grid);
+AgeConditionalStats=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvaluate,Params,[],0,n_a,n_z,N_j,0,a_grid,z_grid,simoptions);
 simoptions.agegroupings=[1,Params.JR]; % Working age, Retired (not actually interested in the numbers for retired)
 AllEmployedStats=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvaluate,Params,[],0,n_a,n_z,N_j,0,a_grid,z_grid,simoptions);
 
