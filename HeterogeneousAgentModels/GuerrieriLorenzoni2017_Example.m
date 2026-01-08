@@ -145,13 +145,14 @@ GEPriceParamNames={'r'}; %,'tau'
 heteroagentoptions.verbose=1;
 disp('Calculating price vector corresponding to the stationary eqm')
 [p_eqm_initial,GeneralEqmCondn_initial]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_z, 0, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions,vfoptions,simoptions);
-Params.r=p_eqm_initial.r;
 
+Params.r=p_eqm_initial.r;
+Params_initial=Params; 
 
 %% Now that we know what the equilibrium price is, lets calculate a bunch of other things associated with the equilibrium
 
 disp('Calculating various equilibrium objects')
-[~,Policy_initial]=ValueFnIter_Case1(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [],vfoptions);
+[V_initial,Policy_initial]=ValueFnIter_Case1(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [],vfoptions);
 
 % PolicyValues=PolicyInd2Val_Case1(Policy,n_d,n_a,n_s,d_grid,a_grid,vfoptions);
 
@@ -170,12 +171,15 @@ AggVars_initial=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_initial, Policy_i
 % plot(sum(StationaryDist_initial,2))
 % plot(cumsum(sum(StationaryDist_initial,2)))
 
+
 %% Final stationary equilibrium
 Params.phi=Params.phi_final;
 
 [p_eqm_final,GeneralEqmCondn_final]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_z, 0, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions,vfoptions,simoptions);
 
 Params.r=p_eqm_final.r;
+Params_final=Params;
+
 [V_final,Policy_final]=ValueFnIter_Case1(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
 
 % PolicyValues=PolicyInd2Val_Case1(Policy,n_d,n_a,n_s,d_grid,a_grid,vfoptions);
@@ -204,7 +208,7 @@ AnnualOutput_final=4*QuarterlyOutput_final.Output.Mean;
 % We want to plot consumption, first set up a function that returns the value of consumption
 Fig1FnsToEvaluate.Consumption = @(d, aprime,a,z,r, v, B, Bprime) GuerrieriLorenzoni2017_ConsumptionFn(d, aprime, a, z,r, v, B, Bprime); % Consumption
 % Now evaluate it on the grid
-ValuesOnGrid=EvalFnOnAgentDist_ValuesOnGrid_Case1(Policy_initial, Fig1FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid,simoptions);
+ValuesOnGrid=EvalFnOnAgentDist_ValuesOnGrid_Case1(Policy_initial, Fig1FnsToEvaluate, Params_initial, [], n_d, n_a, n_z, d_grid, a_grid, z_grid,simoptions);
 
 figure(1)
 subplot(2,1,1); plot(a_grid,ValuesOnGrid.Consumption(:,2),a_grid,ValuesOnGrid.Consumption(:,8))
