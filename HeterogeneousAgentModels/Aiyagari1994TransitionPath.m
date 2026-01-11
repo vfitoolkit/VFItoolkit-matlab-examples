@@ -3,14 +3,14 @@
 % These codes set up and solve the Aiyagari (1994) model for a given
 % parametrization. They then show how to solve for the general equilibrium
 % transition path in reposonse to a 'surprise' one off change in the
-% parameter beta (the time discount parameter).
+% parameter alpha (the capital share in production) from 0.36 to 0.40
 %
 % Transition Path commands require a GPU.
 
 %% Set some basic variables
 
-n_k=2^9;%2^9;
-n_z=21; %21;
+n_k=512;
+n_z=21; 
 
 %Parameters
 Params.beta=0.96;
@@ -92,7 +92,11 @@ Params.alpha=0.36;
 
 % Solve for the stationary general equilbirium
 vfoptions=struct(); % Use default options for solving the value function (and policy fn)
+vfoptions.gridinterplayer=0; % 0=pure discretization (deafult),1=linear interpolation
+vfoptions.ngridinterp=15;
 simoptions=struct(); % Use default options for solving for stationary distribution
+simoptions.gridinterplayer=vfoptions.gridinterplayer;
+simoptions.ngridinterp=vfoptions.ngridinterp;
 heteroagentoptions.verbose=1; % verbose means that you want it to give you feedback on what is going on
 
 fprintf('Calculating price vector corresponding to the stationary general eqm \n')
@@ -101,11 +105,16 @@ fprintf('Calculating price vector corresponding to the stationary general eqm \n
 p_eqm_init % The equilibrium values of the GE prices
 % Note: GeneralEqmCondn_init will be essentially zero, it is the value of the general equilibrium equation
 
+% You can compute the GE condition at the equilibrium price:
+GeneralEqmEqns.CapitalMarket(p_eqm_init.r,AggVars_init.K.Mean,Params.alpha,Params.delta,Params.Expectation_l)
+% Or directly as
+GeneralEqmCondn_init
+
 % For the transition path we will need the initial agents distribution
 Params.r=p_eqm_init.r;
 [~,Policy_init]=ValueFnIter_Case1(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
 
-StationaryDist_init=StationaryDist_Case1(Policy_init,n_d,n_a,n_z,pi_z);
+StationaryDist_init=StationaryDist_Case1(Policy_init,n_d,n_a,n_z,pi_z,simoptions);
 
 % Following line is just a check
 AggVars_init=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_init, Policy_init, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid,simoptions);
