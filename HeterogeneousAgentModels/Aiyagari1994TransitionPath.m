@@ -103,12 +103,8 @@ fprintf('Calculating price vector corresponding to the stationary general eqm \n
 [p_eqm_init,GeneralEqmCondn_init]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_z, 0, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions, simoptions, vfoptions);
 
 p_eqm_init % The equilibrium values of the GE prices
-% Note: GeneralEqmCondn_init will be essentially zero, it is the value of the general equilibrium equation
-
-% You can compute the GE condition at the equilibrium price:
-GeneralEqmEqns.CapitalMarket(p_eqm_init.r,AggVars_init.K.Mean,Params.alpha,Params.delta,Params.Expectation_l)
-% Or directly as
-GeneralEqmCondn_init
+GeneralEqmCondn_init % The value of the general equilibrium equation, at the the general eqm that we found
+% Note: GeneralEqmCondn_init should be essentially zero (that is what it means to be a general eqm)
 
 % For the transition path we will need the initial agents distribution
 Params.r=p_eqm_init.r;
