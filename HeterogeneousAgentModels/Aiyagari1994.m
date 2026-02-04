@@ -176,21 +176,19 @@ ValuesOnGrid = EvalFnOnAgentDist_ValuesOnGrid_Case1( ...
     Policy, FnsToEvaluate2, Params, [], ...
     n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions);
 
-% Lorenz curves and inequality statistics
-simoptions.npoints = 1000;
-
-AllStats = EvalFnOnAgentDist_AllStats_Case1( ...
-    StationaryDist, Policy, FnsToEvaluate2, Params, [], ...
-    n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions);
+% Lorenz curves and inequality statistics (only on GPU)
+if gpuDeviceCount>0
+    simoptions.npoints = 1000;
+    AllStats = EvalFnOnAgentDist_AllStats_Case1(StationaryDist, Policy, FnsToEvaluate2, ...
+        Params,[],n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions);
+    disp(' ');
+    disp('Distributions of Earnings and Wealth');
+    fprintf('Gini (Earnings): %8.4f\n', AllStats.Earnings.Gini);
+    fprintf('Gini (Income):   %8.4f\n', AllStats.Income.Gini);
+    fprintf('Gini (Wealth):   %8.4f\n', AllStats.Wealth.Gini);
+end
 
 %% Output
-
-disp(' ');
-disp('Distributions of Earnings and Wealth');
-fprintf('Gini (Earnings): %8.4f\n', AllStats.Earnings.Gini);
-fprintf('Gini (Income):   %8.4f\n', AllStats.Income.Gini);
-fprintf('Gini (Wealth):   %8.4f\n', AllStats.Wealth.Gini);
-
 fprintf('For parameter values sigma=%.2f, mu=%.2f, rho=%.2f\n', ...
     Params.sigma, Params.mu, Params.rho);
 fprintf('Table 1 moments: sigma=%.4f, rho=%.4f\n', ...
