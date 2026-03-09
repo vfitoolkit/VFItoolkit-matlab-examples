@@ -7,7 +7,7 @@
 %
 % If using without GPU it is recommended to change value of n_k (line 17 of code)
 
-Javier=0;   %If you set this parameter to 0 then the parameters will all be set to those used by Aldrich, Fernandez-Villaverde, Gallant, & Rubio-Ramirez (2011)
+Javier=1;   %If you set this parameter to 0 then the parameters will all be set to those used by Aldrich, Fernandez-Villaverde, Gallant, & Rubio-Ramirez (2011)
 
 %% Set up
 
@@ -24,6 +24,7 @@ Params.gamma=1; %gamma=1 is log-utility
 Params.rho = 0.95;
 Params.delta = 0.10;
 Params.sigmasq_epsilon=0.09;
+Params.sigma_epsilon=sqrt(Params.sigmasq_epsilon);
 
 if Javier==0
     n_z=4;
@@ -34,19 +35,16 @@ if Javier==0
     Params.rho=0.95;
     Params.sigma_epsilon=0.005;
     Params.sigmasq_epsilon=Params.sigma_epsilon^2;
-    vfoptions.tolerance=(1-Params.beta)*10^(-8); % Toolkit default is 10^(-9)
-    vfoptions.howards=20; % Toolkit default is 80
 end
 
 
 %% Compute the steady state
 K_ss=((Params.alpha*Params.beta)/(1-Params.beta*(1-Params.delta)))^(1/(1-Params.alpha));
 X_ss= Params.delta*K_ss;
-%These are not really needed; we just use them to determine the grid on
-%capital. I mainly calculate them to stay true to original article.
+% These are not really needed; we just use them to determine the grid on capital. I mainly calculate them to stay true to original article.
 
 %% Create grids (grids are defined as a column vectors)
-Tauchen_q=3; %Parameter for the Tauchen method
+Tauchen_q=3; % Parameter for the Tauchen method
 [z_grid,pi_z]=discretizeAR1_Tauchen(0,Params.rho,Params.sigma_epsilon,n_z,Tauchen_q);
 
 k_grid=linspace(0,20*K_ss,n_k)'; % Grids should always be declared as column vectors
@@ -57,10 +55,12 @@ DiscountFactorParamNames={'beta'};
 ReturnFn=@(aprime_val, a_val, s_val, gamma, alpha, delta) StochasticNeoClassicalGrowthModel_ReturnFn(aprime_val, a_val, s_val, gamma, alpha, delta);
 
 %% Solve
-%Do the value function iteration. Returns both the value function itself,
-%and the optimal policy function.
+% Do the value function iteration. Returns both the value function itself, and the optimal policy function.
 d_grid=0; %no d variable
 n_d=0; %no d variable
+
+vfoptions.gridinterplayer=1; % for next period capital, interpolate between grid points...
+vfoptions.ngridinterp=20; % ...with 20 more evenly spaced grid points
 
 tic;
 [V, Policy]=ValueFnIter_Case1(n_d,n_k,n_z,d_grid,k_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
@@ -73,3 +73,7 @@ fprintf('Time to solve the value function iteration was %8.2f seconds. \n', time
 surf(k_grid*ones(1,n_z),ones(n_k,1)*z_grid',V)
 
 
+%% Comment
+% The number of grid points being used here for captial (n_k, together with vfoptions.ngridinterp)
+% is obscenely large, way more than is actually needed for an accurate solution.
+% But model is so simple, so why not just go overkill.
