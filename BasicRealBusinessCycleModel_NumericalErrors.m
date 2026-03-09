@@ -12,6 +12,9 @@ disp('WARNING: Marcet-DenHaan statistics are not correctly implemented')
 % Run code that solves the Basic RBC model.
 BasicRealBusinessCycleModel
 
+simoptions.gridinterplayer=vfoptions.gridinterplayer;
+simoptions.ngridinterp=vfoptions.ngridinterp;
+
 %% If you are just interested in how to solve the value function problem for the Basic Real Business Cycle Model you can stop here.
 % The rest of the code reproduces some relevant parts of the Figures and Tables of Aruoba, Fernanadez-Villaverde, & Rubio-Ramirez (2006).
 
@@ -35,19 +38,19 @@ xlim([a_grid(point7K_ss),a_grid(onepoint3K_ss)]);
 
 %% Simulated Densities of Output, Capital, and Consumption
 % 1000 simulations of 500 points (I use a 100 point burn in, then do not say if they burn-in or just start in steady-state?)
-NSims=1000;
+simoptions.numbersims=1000;
 simoptions.burnin=100;
-simoptions.simoptions.simperiods=500;
+simoptions.simperiods=500;
 simoptions.parallel=2;
 HistBins=500;
 
-StationaryDist=zeros(n_a,n_z,NSims,'gpuArray');
-for ii=1:NSims
-    StationaryDist(:,:,ii)=StationaryDist_Case1_Simulation(Policy,n_d,n_a,n_z,pi_z,simoptions);
-end
+StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_z,pi_z,simoptions);
+StationaryDist_SimValues=SimPanelValues_InfHorz(StationaryDist,Policy,n_d,n_a,n_z,pi_z,simoptions);
+StationaryDist_Sim=zeros(n_a,n_z,simoptions.numbersims,'gpuArray');
+StationaryDist_Sim=countthem(StationaryDist_SimValues) % this will error as doesn't exist (can't be bothered fixing it just now)
 
-%Judging from the y-axes of the Figures it appears the 'densities' are calculated as histograms formed by summing across all of the simulations.
-SteadyStateHist=sum(StationaryDist,3)*simoptions.simoptions.simperiods; %Multiply by simoptions.simperiods as otherwise they are the actual densities being summed
+% Judging from the y-axes of the Figures it appears the 'densities' are calculated as histograms formed by summing across all of the simulations.
+SteadyStateHist=sum(StationaryDist_Sim,3)*simoptions.simperiods; %Multiply by simoptions.simperiods as otherwise they are the actual densities being summed
 CapitalSteadyStateHist=zeros(n_a,1,'gpuArray');
 OutputSteadyStateHist=zeros(HistBins,1,'gpuArray');
 ConsumptionSteadyStateHist=zeros(HistBins,1,'gpuArray');
@@ -124,10 +127,10 @@ FnsToEvaluate.aprime = @(d,aprime,a,z) aprime; % Productivity shock
 FnsToEvaluate.l = @(d,aprime,a,z) d; % Productivity shock
 
 m=2; q=1;
-DenHaanMarcetStat=zeros(NSims,1);
-B_T=zeros(m*q,NSims);
-A_T=zeros(m*q,m*q,NSims);
-for ii=1:NSims
+DenHaanMarcetStat=zeros(simoptions.numbersims,1);
+B_T=zeros(m*q,simoptions.numbersims);
+A_T=zeros(m*q,m*q,simoptions.numbersims);
+for ii=1:simoptions.numbersims
     TimeSeries=TimeSeries_Case1(Policy, FnsToEvaluate, Params, n_d, n_a, n_z, d_grid, a_grid, z_grid,pi_z,simoptions);
 
     fy_t=zeros(m,simoptions.simperiods-2);
@@ -222,7 +225,7 @@ ylim([-10,-1]); xlim([a_grid(point7K_ss),a_grid(onepoint3K_ss)]);
 
 % Table 5 (Table 6 if UseAlternativeParams=1)
 AbsMaxEE=max(max(log10(abs(EulerEqnErrors(point7K_ss:onepoint3K_ss,zlow:zhigh)))));
-IntegEE=log10(abs(sum(sum(EulerEqnErrors.*(SteadyStateHist/(NSims*simoptions.simperiods))))));
+IntegEE=log10(abs(sum(sum(EulerEqnErrors.*(SteadyStateHist/(simoptions.numbersims*simoptions.simperiods))))));
 fprintf('Table 5: Euler errors (Abs(log10)) \n')
 fprintf('            Absolute max Euler Error     Integral of the Euler Errors \n')
 fprintf('Value fn:   %8.2f                        %8.6f \n', [AbsMaxEE, IntegEE])

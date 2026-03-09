@@ -56,8 +56,8 @@ ReturnFn=@(aprime_val, a_val, s_val, gamma, alpha, delta) StochasticNeoClassical
 
 %% Solve
 % Do the value function iteration. Returns both the value function itself, and the optimal policy function.
-d_grid=0; %no d variable
-n_d=0; %no d variable
+d_grid=0; % no d variable
+n_d=0; % no d variable
 
 vfoptions.gridinterplayer=1; % for next period capital, interpolate between grid points...
 vfoptions.ngridinterp=20; % ...with 20 more evenly spaced grid points
