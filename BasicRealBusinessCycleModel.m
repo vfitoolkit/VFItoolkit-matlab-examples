@@ -48,8 +48,10 @@ DiscountFactorParamNames={'beta'};
 ReturnFn=@(d_val,aprime_val, a_val, s_val,alpha,delta,theta,tau) BasicRealBusinessCycleModel_ReturnFn(d_val,aprime_val, a_val, s_val,alpha,delta,theta,tau);
 
 %% Solve
-vfoptions.gridinterplayer=1; % for next period capital, interpolate between grid points...
-vfoptions.ngridinterp=20; % ...with 20 more evenly spaced grid points
+if gpuDeviceCount>0 % If you have a GPU, we can use the full toolkit features, on CPU only basics are available
+    vfoptions.gridinterplayer=1; % for next period capital, interpolate between grid points...
+    vfoptions.ngridinterp=20; % ...with 20 more evenly spaced grid points
+end
 
 % Do the value function iteration. Returns both the value function itself, and the optimal policy function.
 [V,Policy]=ValueFnIter_Case1(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames,[],vfoptions);

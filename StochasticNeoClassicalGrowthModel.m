@@ -59,8 +59,10 @@ ReturnFn=@(aprime_val, a_val, s_val, gamma, alpha, delta) StochasticNeoClassical
 d_grid=0; % no d variable
 n_d=0; % no d variable
 
-vfoptions.gridinterplayer=1; % for next period capital, interpolate between grid points...
-vfoptions.ngridinterp=20; % ...with 20 more evenly spaced grid points
+if gpuDeviceCount>0 % If you have a GPU, we can use the full toolkit features, on CPU only basics are available
+    vfoptions.gridinterplayer=1; % for next period capital, interpolate between grid points...
+    vfoptions.ngridinterp=20; % ...with 20 more evenly spaced grid points
+end
 
 tic;
 [V, Policy]=ValueFnIter_Case1(n_d,n_k,n_z,d_grid,k_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);

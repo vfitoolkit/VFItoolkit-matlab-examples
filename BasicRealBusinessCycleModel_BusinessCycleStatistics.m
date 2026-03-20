@@ -5,9 +5,10 @@ disp('Running BasicRealBusinessCycleModel_BusinessCycleStatistics.m')
 % Run code that solves the Basic RBC model.
 BasicRealBusinessCycleModel
 
-simoptions.gridinterplayer=vfoptions.gridinterplayer;
-simoptions.ngridinterp=vfoptions.ngridinterp;
-
+if gpuDeviceCount>0 % If you have a GPU, we can use the full toolkit features, on CPU only basics are available
+    simoptions.gridinterplayer=vfoptions.gridinterplayer;
+    simoptions.ngridinterp=vfoptions.ngridinterp;
+end
 
 %% We will generate some simulated data and then use this to calculate the standard business cycle statistics
 % Set some options, the following are actually just the defaults anyway
