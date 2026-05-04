@@ -100,7 +100,7 @@ simoptions.ngridinterp=vfoptions.ngridinterp;
 heteroagentoptions.verbose=1; % verbose means that you want it to give you feedback on what is going on
 
 fprintf('Calculating price vector corresponding to the stationary general eqm \n')
-[p_eqm_init,GeneralEqmCondn_init]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_z, 0, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions, simoptions, vfoptions);
+[p_eqm_init,GeneralEqmCondn_init]=HeteroAgentStationaryEqm_InfHorz(n_d, n_a, n_z, 0, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions, simoptions, vfoptions);
 
 p_eqm_init % The equilibrium values of the GE prices
 GeneralEqmCondn_init % The value of the general equilibrium equation, at the the general eqm that we found
@@ -108,12 +108,12 @@ GeneralEqmCondn_init % The value of the general equilibrium equation, at the the
 
 % For the transition path we will need the initial agents distribution
 Params.r=p_eqm_init.r;
-[~,Policy_init]=ValueFnIter_Case1(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
+[~,Policy_init]=ValueFnIter_InfHorz(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
 
-StationaryDist_init=StationaryDist_Case1(Policy_init,n_d,n_a,n_z,pi_z,simoptions);
+StationaryDist_init=StationaryDist_InfHorz(Policy_init,n_d,n_a,n_z,pi_z,simoptions);
 
 % Following line is just a check
-AggVars_init=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_init, Policy_init, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid,simoptions);
+AggVars_init=EvalFnOnAgentDist_AggVars_InfHorz(StationaryDist_init, Policy_init, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid,simoptions);
 
 %% Compute the final general equilbrium
 Params.r=0.038; % Initial guess
@@ -122,17 +122,17 @@ Params.alpha=0.4;
 % Note: if the change in parameters affected pi_z this would need to be recalculated here.
 
 disp('Calculating price vector corresponding to the final stationary eqm')
-[p_eqm_final,GeneralEqmCondn_final]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_z, 0, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions, simoptions, vfoptions);
+[p_eqm_final,GeneralEqmCondn_final]=HeteroAgentStationaryEqm_InfHorz(n_d, n_a, n_z, 0, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions, simoptions, vfoptions);
 
 p_eqm_final % The equilibrium values of the GE prices
 % Note: GeneralEqmCondn_final will be essentially zero, it is the value of the general equilibrium equation
 
 % For the transition path we will need the final value function
 Params.r=p_eqm_final.r;
-[V_final,Policy_final]=ValueFnIter_Case1(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn,Params, DiscountFactorParamNames,[],vfoptions);
+[V_final,Policy_final]=ValueFnIter_InfHorz(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn,Params, DiscountFactorParamNames,[],vfoptions);
 
-StationaryDist_final=StationaryDist_Case1(Policy_final,n_d,n_a,n_z,pi_z);
-AggVars_final=EvalFnOnAgentDist_AggVars_Case1(StationaryDist_final, Policy_final, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid,simoptions);
+StationaryDist_final=StationaryDist_InfHorz(Policy_final,n_d,n_a,n_z,pi_z);
+AggVars_final=EvalFnOnAgentDist_AggVars_InfHorz(StationaryDist_final, Policy_final, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid,simoptions);
 
 % surf(k_grid*ones(1,n_s),ones(n_a,1)*s_grid',V_final)
 
@@ -168,24 +168,28 @@ transpathoptions.GEnewprice3.howtoupdate=... % a row is: GEcondn, price, add, fa
 % unstable (fail to converge). Technically this is the damping factor in a shooting algorithm.
 
 
-% Now just run the TransitionPath_Case1 command (all of the other inputs
+% Now just run the TransitionPath_InfHorz command (all of the other inputs
 % are things we had already had to define to be able to solve for the
 % initial and final equilibria)
 transpathoptions.weightscheme=1;
 transpathoptions.verbose=1;
 
-[PricePath,GeneralEqmCondnPath]=TransitionPath_Case1(PricePath0, ParamPath, T, V_final, StationaryDist_init, n_d, n_a, n_z, pi_z, d_grid,a_grid,z_grid, ReturnFn, FnsToEvaluate, TransPathGeneralEqmEqns, Params, DiscountFactorParamNames, transpathoptions,vfoptions,simoptions);
+% we also want to use divide-and-conquer for the transition path [faster and less memory]
+vfoptionspath=vfoptions;
+vfoptionspath.divideandconquer=1;
+
+[PricePath,GeneralEqmCondnPath]=TransitionPath_InfHorz(PricePath0, ParamPath, T, V_final, StationaryDist_init, n_d, n_a, n_z, pi_z, d_grid,a_grid,z_grid, ReturnFn, FnsToEvaluate, TransPathGeneralEqmEqns, Params, DiscountFactorParamNames, transpathoptions,vfoptionspath,simoptions);
 
 figure(1)
 plot(0:1:T, [p_eqm_init.r,PricePath.r])
 title('interest rate path for transtion')
 
 %% Look at results
-[VPath,PolicyPath]=ValueFnOnTransPath_Case1(PricePath, ParamPath, T, V_final, Policy_final, Params, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, transpathoptions, vfoptions);
+[VPath,PolicyPath]=ValueFnOnTransPath_InfHorz(PricePath, ParamPath, T, V_final, Policy_final, Params, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, transpathoptions, vfoptionspath);
 
-AgentDistPath=AgentDistOnTransPath_Case1(StationaryDist_init, PolicyPath,n_d,n_a,n_z,pi_z,T,simoptions);
+AgentDistPath=AgentDistOnTransPath_InfHorz(StationaryDist_init, PolicyPath,n_d,n_a,n_z,pi_z,T,simoptions);
 
-AggVarsPath=EvalFnOnTransPath_AggVars_Case1(FnsToEvaluate,AgentDistPath,PolicyPath,PricePath,ParamPath, Params, T, n_d, n_a, n_z, d_grid, a_grid,z_grid,simoptions);
+AggVarsPath=EvalFnOnTransPath_AggVars_InfHorz(FnsToEvaluate,AgentDistPath,PolicyPath,PricePath,ParamPath, Params, T, n_d, n_a, n_z, d_grid, a_grid,z_grid,simoptions);
 
 figure(2)
 plot(0:1:T, [AggVars_init.K.Mean, AggVarsPath.K.Mean])

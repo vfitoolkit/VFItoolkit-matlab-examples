@@ -119,12 +119,14 @@ simoptions = struct();  % Default options for stationary distribution
 % vfoptions.ngridinterp      = 15;   % number of extra points between grid points
 % simoptions.gridinterplayer = vfoptions.gridinterplayer;
 % simoptions.ngridinterp     = vfoptions.ngridinterp;
+% Note: You DO want to use the 'grid interpolation layer', it is simply better (better accuracy-runtime frontier).
+% It is only off here to keep the example as simple as possible.
 
-heteroagentoptions.verbose = 1;  % Display progress information
+heteroagentoptions.verbose = 1;  % Display progress information [=2 is better for debugging]
 
 fprintf('Calculating price vector corresponding to the stationary general equilibrium\n');
 
-[p_eqm, GeneralEqmCondn] = HeteroAgentStationaryEqm_Case1(n_d, n_a, n_z, 0, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames, heteroagentoptions, simoptions, vfoptions);
+[p_eqm, GeneralEqmCondn] = HeteroAgentStationaryEqm_InfHorz(n_d, n_a, n_z, 0, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames, heteroagentoptions, simoptions, vfoptions);
 
 fprintf(' \n');
 fprintf('The equilibrium values of the GE prices: %2.4f \n', p_eqm.r);
@@ -139,16 +141,16 @@ Params.w = (1-Params.alpha)*((Params.r + Params.delta) / Params.alpha)^(Params.a
 
 fprintf('Calculating various equilibrium objects \n');
 
-[V, Policy] = ValueFnIter_Case1(n_d, n_a, n_z, d_grid, a_grid, z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
+[V, Policy] = ValueFnIter_InfHorz(n_d, n_a, n_z, d_grid, a_grid, z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
 
 % Convert policy from indices to values
-PolicyValues = PolicyInd2Val_Case1(Policy, n_d, n_a, n_z, d_grid, a_grid, vfoptions);
+PolicyValues = PolicyInd2Val_InfHorz(Policy, n_d, n_a, n_z, d_grid, a_grid, vfoptions);
 
 % Stationary distribution
-StationaryDist = StationaryDist_Case1(Policy, n_d, n_a, n_z, pi_z, simoptions);
+StationaryDist = StationaryDist_InfHorz(Policy, n_d, n_a, n_z, pi_z, simoptions);
 
 % Aggregate variables
-AggVars = EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions);
+AggVars = EvalFnOnAgentDist_AggVars_InfHorz(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions);
 
 fprintf('Aggregate capital: %f \n', AggVars.K.Mean);
 % Note that AggVars uses the name 'K' we gave to the FnsThEvaluate
@@ -167,12 +169,12 @@ FnsToEvaluate2.Consumption = @(aprime, a, z, alpha, delta, r) ...
     Aiyagari1994_ConsumptionFn(aprime, a, z, alpha, delta, r);
 
 % Values on the grid
-ValuesOnGrid = EvalFnOnAgentDist_ValuesOnGrid_Case1(Policy, FnsToEvaluate2, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions);
+ValuesOnGrid = EvalFnOnAgentDist_ValuesOnGrid_InfHorz(Policy, FnsToEvaluate2, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions);
 
 % Lorenz curves and inequality statistics (only on GPU)
 if gpuDeviceCount>0
     simoptions.npoints = 1000;
-    AllStats = EvalFnOnAgentDist_AllStats_Case1(StationaryDist, Policy, FnsToEvaluate2, Params,[],n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions);
+    AllStats = EvalFnOnAgentDist_AllStats_InfHorz(StationaryDist, Policy, FnsToEvaluate2, Params,[],n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions);
     fprintf(' \n');
     fprintf('Distributions of Earnings and Wealth \n');
     fprintf('Gini (Earnings): %8.4f \n', AllStats.Earnings.Gini);
