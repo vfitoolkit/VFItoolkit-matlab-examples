@@ -1,15 +1,13 @@
-function F=Aiyagari1994_ReturnFn(aprime_val, a_val, z_val,alpha,delta,gamma,r)
-% A list of the parameters to be used
-% alpha
-% delta
-% gamma
-% r
+function F=Aiyagari1994_ReturnFn(aprime, a, z,alpha,delta,gamma,r)
+% Action space: aprime,a,z
+% Rest are parameters
 
+F=-Inf; % placeholder
 
-F=-Inf;
 w=(1-alpha)*((r+delta)/alpha)^(alpha/(alpha-1));
-c=w*z_val+(1+r)*a_val-aprime_val; 
-%c=wz+(1+r)a_t-a_{t+1}
+
+c=w*z+(1+r)*a-aprime; 
+
 if c>0
     if gamma==1
         F=log(c);

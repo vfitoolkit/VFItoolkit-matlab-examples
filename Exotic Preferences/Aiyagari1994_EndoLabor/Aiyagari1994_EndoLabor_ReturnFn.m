@@ -1,27 +1,25 @@
-function F=Aiyagari1994_EndoLabor_ReturnFn(d_val, aprime_val, a_val, z_val,gamma_c,gamma_l,chi,r,w,nonSeperableUtility)
-% A list of the parameters to be used
-% alpha
-% delta
-% gamma
-% r
+function F=Aiyagari1994_EndoLabor_ReturnFn(l, aprime, a, z,gamma_c,gamma_l,chi,r,w,nonSeperableUtility)
+% Action space: l,aprime,a,z
+% Rest are parameters
 
-F=-Inf;
-c=w*d_val*z_val+(1+r)*a_val-aprime_val; 
-%c=wlz+(1+r)a_t-a_{t+1}
-if c>0 && d_val<1
+F=-Inf; % placeholder
+
+c=w*l*z+(1+r)*a-aprime; % budget constraint
+
+if c>0 && l<1
     if nonSeperableUtility==0
         if gamma_c==1 && gamma_l==1
-            F=log(c)+chi*log(1-d_val);
+            F=log(c)+chi*log(1-l);
         elseif gamma_c==1
-            F=log(c)+chi*((1-d_val)^(1-gamma_l) -1)/(1-gamma_l);
+            F=log(c)+chi*((1-l)^(1-gamma_l) -1)/(1-gamma_l);
         elseif gamma_l==1
-            F=(c^(1-gamma_c) -1)/(1-gamma_c)+chi*log(1-d_val);
+            F=(c^(1-gamma_c) -1)/(1-gamma_c)+chi*log(1-l);
         else
-            F=(c^(1-gamma_c) -1)/(1-gamma_c) +chi*((1-d_val)^(1-gamma_l) -1)/(1-gamma_l);
+            F=(c^(1-gamma_c) -1)/(1-gamma_c) +chi*((1-l)^(1-gamma_l) -1)/(1-gamma_l);
         end
     else % nonSeperableUtility==1
         % gamma_c plays the role of gamma
-        F=(((c^(1-chi))*((1-d_val)^chi))^(1-gamma_c))/(1-gamma_c);
+        F=(((c^(1-chi))*((1-l)^chi))^(1-gamma_c))/(1-gamma_c);
     end
 end
 

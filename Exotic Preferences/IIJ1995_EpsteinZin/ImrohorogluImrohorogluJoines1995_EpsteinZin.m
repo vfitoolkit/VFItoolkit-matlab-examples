@@ -255,7 +255,7 @@ GeneralEqmEqns.Bequests = @(Tr_beq,Tr) Tr_beq-Tr; % Equation (17): Accidental be
 
 %% Test
 disp('Test AggVars')
-AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,[],simoptions);
+AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,simoptions);
 
 %% Calculate the general equilibrium
 heteroagentoptions.verbose=1; % Give info on how the General eqm conditions are going
@@ -269,7 +269,7 @@ Params.Tr_beq=p_eqm.Tr_beq;
 [V, Policy]=ValueFnIter_Case1_FHorz(n_d,n_a,n_z,N_j, d_grid, a_grid, z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [],vfoptions);
 StationaryDist=StationaryDist_FHorz_Case1(jequaloneDist,AgeWeightsParamNames,Policy,n_d,n_a,n_z,N_j,pi_z,Params,simoptions);
 
-AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,[],simoptions);
+AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,simoptions);
 % Aggregate labor is actually exogenous and equal to N=0.3491, but I
 % anyway compute it just to show how (can also be used as a double check)
 % N=E[z*h*epsilon_j*I_j] (the mewj and 0.94 of IIJ1995 on pg 90 are implicit in the expectation)
@@ -281,7 +281,7 @@ FnsToEvaluate2.C = @(aprime,a,z,r,tau_u, tau_s,h,zeta,epsilon_j,I_j,alpha,delta,
 FnsToEvaluate2.Income = @(aprime,a,z,r,h,zeta, epsilon_j,I_j,alpha,delta, A,SSdivw, Tr_beq,workinglifeincome,g,agej) ImrohorogluImrohorogluJoines1995_IncomeFn(aprime,a,z,r,h,zeta, epsilon_j,I_j,alpha,delta, A,SSdivw, Tr_beq,workinglifeincome,g,agej); % Income
 % Note: the previous utility formula would have been incorrect
 
-AggVars2=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate2, Params, [], n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,[],simoptions);
+AggVars2=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate2, Params, [], n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,simoptions);
 
 K=AggVars2.K.Mean;
 N=AggVars2.N.Mean;
@@ -301,7 +301,7 @@ fprintf('Average Utility (value fn): %8.3f \n ', sum(sum(sum(V.*StationaryDist))
 fprintf('K/Q: %8.3f \n ', K/Q);
 
 %% Some life-cycle profiles for income, consumption, and assets
-LifeCycleProfiles=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvaluate2,[],Params,0,n_a,n_z,N_j,0,a_grid,z_grid,simoptions);
+LifeCycleProfiles=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvaluate2,Params,[],0,n_a,n_z,N_j,0,a_grid,z_grid,simoptions);
 % (this creates much more than just the 'age conditional mean' profiles that we use here)
 % (Note: when productivity growth is non-zero then you would need to correct some of these)
 % I have assumed income includes capital income, unemployment benefits and
@@ -311,4 +311,4 @@ LifeCycleProfiles=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvalu
 % social security benefits.
 
 %% To create Figures 6 and 7 you would also need the value of assets on the grid
-ValuesOnGrid=EvalFnOnAgentDist_ValuesOnGrid_FHorz_Case1(Policy, FnsToEvaluate2, Params, [], n_d, n_a, n_z, N_j, d_grid, a_grid, z_grid,[],simoptions);
+ValuesOnGrid=EvalFnOnAgentDist_ValuesOnGrid_FHorz_Case1(Policy, FnsToEvaluate2, Params, [], n_d, n_a, n_z, N_j, d_grid, a_grid, z_grid,simoptions);

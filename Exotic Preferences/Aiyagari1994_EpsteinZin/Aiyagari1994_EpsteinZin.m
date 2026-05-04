@@ -52,10 +52,12 @@ end
 if strcmp(vfoptions.exoticpreferences,'EpsteinZin')
     % Note that gamma has been removed from return function when using Epstein-Zin preferences.
     % To do this now use Aiyagari1994_EpsteinZin_ReturnFn as return fn.
-    ReturnFn=@(aprime, a, z,alpha,delta,gamma,r) Aiyagari1994_EpsteinZin_ReturnFn(aprime, a, z,alpha,delta,gamma,r);
+    ReturnFn=@(aprime, a, z,alpha,delta,r)... 
+        Aiyagari1994_EpsteinZin_ReturnFn(aprime, a, z,alpha,delta,r);
     % Note that I could delete gamma from the return function entirely as it is no longer used.
 else
-    ReturnFn=@(aprime, a, z,alpha,delta,gamma,r) Aiyagari1994_ReturnFn(aprime_val, a, z,alpha,delta,gamma,r);
+    ReturnFn=@(aprime, a, z,alpha,delta,gamma,r)...
+        Aiyagari1994_ReturnFn(aprime_val, a, z,alpha,delta,gamma,r);
 end
 % When using Epstein-Zin preferences the risk aversion is done as part of
 % the value function iteration but not as part of the return function

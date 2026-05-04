@@ -33,15 +33,11 @@ Params.beta=0.96; % The quasi-hyperbolic discounting parameter controlling disco
 % Note that setting beta0=1 would give standard exponential discounting.
 
 % 4. Minor adjustment to 'discount factors'.
-% For quasi-hyperbolic preferences the last element of DiscountFactorParamNames must be the 'today-to-tomorrow' additional discount factor.
-DiscountFactorParamNames={'beta','beta0'};
-% Note that when using Quasi-hyperbolic discounting beta just acts like a
-% standard discounting parameter, only beta0 needs to be treated specially.
-
-% If not using quasi-hyperbolic discounting then disable beta0 by setting
-if strcmp(vfoptions.exoticpreferences,'None')
-    DiscountFactorParamNames={'beta','sj','gdiscount'};
-end
+% For quasi-hyperbolic preferences you have standard DiscountFactorParamNames as the 'tomorrow-to-tomorrow' discount factor.
+DiscountFactorParamNames={'beta'};
+% And now you also have to declare the additional today-to-tomorrow discount factor.
+vfoptions.QHadditionaldiscount='beta0';
+% Note that when using Quasi-hyperbolic discounting beta just acts like a standard discounting parameter, only beta0 needs to be treated specially.
 
 % That is all. Every other line of code is unchanged!! Quasi-Hyperbolic discounting really is that easy ;)
 

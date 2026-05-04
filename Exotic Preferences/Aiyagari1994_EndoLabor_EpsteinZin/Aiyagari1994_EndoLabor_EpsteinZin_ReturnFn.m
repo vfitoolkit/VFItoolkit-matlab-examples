@@ -1,15 +1,13 @@
-function F=Aiyagari1994_EndoLabor_EpsteinZin_ReturnFn(d_val, aprime_val, a_val, z_val,chi,r,w)
-% A list of the parameters to be used
-% alpha
-% delta
-% gamma
-% r
+function F=Aiyagari1994_EndoLabor_EpsteinZin_ReturnFn(l, aprime, a, z,chi,r,w)
+% Action space: l,aprime,a,z
+% Rest are parameters
 
-F=-Inf;
-c=w*d_val*z_val+(1+r)*a_val-aprime_val; 
-%c=wlz+(1+r)a_t-a_{t+1}
-if c>0 && d_val<1
-    F=((c^(1-chi)) *((1-d_val)^chi));
+F=-Inf; % placeholder
+
+c=w*l*z+(1+r)*a-aprime; % budget constraint
+
+if c>0 && l<1
+    F=((c^(1-chi)) *((1-l)^chi));
 end
 
 end
