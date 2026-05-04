@@ -139,11 +139,12 @@ Params.oneminuslambda=1-Params.lambda; % This is now the conditional probability
 Params.rho=1/(1+Params.i); % The factor at which firms discount the future depends on both the risk-free interest rate and the risk/probability of exit
 DiscountFactorParamNames={'rho','oneminuslambda'};
 
-ReturnFn=@(aprime, a, z1,z2,w,r,alpha,gamma,taurate,subsidyrate,cf) RestucciaRogerson2008_ReturnFn(aprime, a, z1,z2,w,r,alpha,gamma,taurate,subsidyrate,cf);
+ReturnFn=@(aprime, a, z1,z2,w,r,alpha,gamma,taurate,subsidyrate,cf)...
+    RestucciaRogerson2008_ReturnFn(aprime, a, z1,z2,w,r,alpha,gamma,taurate,subsidyrate,cf);
 
 % Check that everything is working so far by solving the value function
 vfoptions=struct(); % use default options
-[V,Policy]=ValueFnIter_Case1(n_d,n_a,n_z,[],a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [],vfoptions);
+[V,Policy]=ValueFnIter_InfHorz(n_d,n_a,n_z,[],a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [],vfoptions);
 
 % If you wanted to look at the value fn
 % figure(2)
@@ -186,7 +187,7 @@ EntryExitParamNames.CondlProbOfSurvival={'oneminuslambda'};
 
 % Check that everything is working so far by solving the simulation of
 % agent distribution to get the stationary distribution.
-StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_z,pi_z, simoptions, Params, EntryExitParamNames);
+StationaryDist=StationaryDist_InfHorz(Policy,n_d,n_a,n_z,pi_z, simoptions, Params, EntryExitParamNames);
 
 % If you wanted to look at the pdf:
 % surf(shiftdim(StationaryDist.pdf,1))
@@ -244,7 +245,7 @@ n_p=0;
 disp('Calculating price vector corresponding to the stationary eqm')
 % tic;
 % NOTE: EntryExitParamNames has to be passed as an additional input compared to the standard case.
-[p_eqm,p_eqm_index, GeneralEqmCondition]=HeteroAgentStationaryEqm_Case1(0, n_a, n_z, n_p, pi_z, [], a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions, simoptions, [], EntryExitParamNames);
+[p_eqm,p_eqm_index, GeneralEqmCondition]=HeteroAgentStationaryEqm_InfHorz(0, n_a, n_z, n_p, pi_z, [], a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions, simoptions, [], EntryExitParamNames);
 % findeqmtime=toc
 Params.w=p_eqm.w;
 Params.ebar=p_eqm.ebar;
@@ -253,12 +254,12 @@ Params.ebar=p_eqm.ebar;
 % I get w=1.9074, ebar is all ones.
 
 % Calculate some things in the general eqm
-[V,Policy]=ValueFnIter_Case1(n_d,n_a,n_z,[],a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
-StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_z,pi_z, simoptions, Params, EntryExitParamNames);
+[V,Policy]=ValueFnIter_InfHorz(n_d,n_a,n_z,[],a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
+StationaryDist=StationaryDist_InfHorz(Policy,n_d,n_a,n_z,pi_z, simoptions, Params, EntryExitParamNames);
 
 % Impose the labour market clearance, which involves calculating Ne. See comments above (about 10-20 lines above).
 FnsToEvaluate.nbar = @(aprime,a,z1,z2,agentmass,alpha,gamma,r,w,taurate,subsidyrate) ((1-((z2>=0)*taurate+(z2<0)*subsidyrate)*z2)*z1)^(1/(1-alpha-gamma)) *(alpha/r)^(alpha/(1-gamma-alpha)) *(gamma/w)^((1-alpha)/(1-gamma-alpha)); % which evaluates to Nbar in the aggregate
-AggValues=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, [], simoptions, EntryExitParamNames);
+AggValues=EvalFnOnAgentDist_AggVars_InfHorz(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, [], simoptions, EntryExitParamNames);
 InitialNe=Params.Ne;
 Params.Ne=1/AggValues.nbar.Aggregate; % AggValues is presently equal to Nbar. This line is imposing/satisfying the labour market clearance condition.
 StationaryDist.mass=StationaryDist.mass*(Params.Ne/InitialNe); % Take advantage of linearity of the stationary distribution in new entrants distribution.
@@ -298,8 +299,7 @@ FnsToEvaluate.output = @(aprime,a,z1,z2,agentmass, alpha,gamma,r,w,taurate,subsi
 % To use agentmass as input you must use that exact name, and it must be first input after z
 
 ValuesOnGrid=EvalFnOnAgentDist_ValuesOnGrid_InfHorz_Mass(StationaryDist.mass, Policy, FnsToEvaluate, Params, [],EntryExitParamNames, n_d, n_a, n_z, [], a_grid, z_grid, simoptions);
-
-ProbDensityFns=EvalFnOnAgentDist_pdf_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, [], a_grid, z_grid, simoptions, EntryExitParamNames);
+ProbDensityFns=EvalFnOnAgentDist_ProbDensityFn_InfHorz(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, [], a_grid, z_grid, simoptions, EntryExitParamNames);
 
 % s_grid.^(1/(1-Params.gamma-Params.alpha))
 nbarValues=ValuesOnGrid.nbar(:,:,:);
@@ -358,7 +358,7 @@ FnsToEvaluate.subsidy = @(aprime,a,z1,z2,agentmass, alpha,gamma,r,w,taurate,subs
 % Following is just 'indicator for subsidised' times output, needed to calculate Ys
 FnsToEvaluate.outputofsubsidised = @(aprime,a,z1,z2,agentmass, alpha,gamma,r,w,taurate,subsidyrate) (z2<0)*((1-((z2>=0)*taurate+(z2<0)*subsidyrate)*z2))^((alpha+gamma)/(1-gamma-alpha))*z1^(1/(1-gamma-alpha)) *(alpha/r)^(alpha/(1-gamma-alpha)) *(gamma/w)^(gamma/(1-gamma-alpha));
 
-AggValues=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions, EntryExitParamNames);
+AggValues=EvalFnOnAgentDist_AggVars_InfHorz(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions, EntryExitParamNames);
 
 Output.Y=AggValues.output.Aggregate;
 Output.N=AggValues.nbar.Aggregate;

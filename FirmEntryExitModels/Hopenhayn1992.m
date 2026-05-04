@@ -89,7 +89,7 @@ vfoptions.ReturnToExitFnParamNames={}; %It is important that these are in same o
 % Check that everything is working so far by solving the value function
 vfoptions % print them to screen
 tic;
-[V,Policy,ExitPolicy]=ValueFnIter_Case1(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
+[V,Policy,ExitPolicy]=ValueFnIter_InfHorz(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
 toc
 
 %% Stationary Distribution of Agents with entry and exit
@@ -130,7 +130,7 @@ simoptions % Print them to screen
 
 % Check that everything is working so far by solving the simulation of
 % agent distribution to get the stationary distribution.
-StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_z,pi_z, simoptions,Params,EntryExitParamNames);
+StationaryDist=StationaryDist_InfHorz(Policy,n_d,n_a,n_z,pi_z, simoptions,Params,EntryExitParamNames);
 
 % Note: When using models, such as entry and exit, where the mass of agents is not equal to 1
 % the toolkit will automatically keep track of distributions as
@@ -164,7 +164,7 @@ FnsToEvaluate.Y = @(d, aprime,a,z,alpha) z*(d^alpha); % Total output
 % mass, and this is automatically used internally to make all relevant
 % changes to the algorithms)
 simoptions.keeppolicyonexit=1; % Is not needed for simulation, but is needed for EvalFnOnAgentDist.
-AggVars=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, [], simoptions, EntryExitParamNames);
+AggVars=EvalFnOnAgentDist_AggVars_InfHorz(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, [], simoptions, EntryExitParamNames);
 
 % The general equilibrium condition is that the EV^e-ce=0.
 % This does not fit standard format for general equilibrium conditions.
@@ -188,15 +188,15 @@ n_p=0;
 disp('Calculating price vector corresponding to the stationary eqm')
 % tic;
 % NOTE: EntryExitParamNames has to be passed as an additional input compared to the standard case.
-[p_eqm_initial,p_eqm_index_initial, GeneralEqmCondition_initial]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_z, n_p, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions, simoptions, vfoptions, EntryExitParamNames);
+[p_eqm_initial,p_eqm_index_initial, GeneralEqmCondition_initial]=HeteroAgentStationaryEqm_InfHorz(n_d, n_a, n_z, n_p, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions, simoptions, vfoptions, EntryExitParamNames);
 % findeqmtime=toc
 Params.p=p_eqm_initial.p;
 Params.Ne=p_eqm_initial.Ne;
 
 %% Now that we have the general eqm, we need to compute the value function, etc. in this eqm
-[V,Policy,ExitPolicy]=ValueFnIter_Case1(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
-StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_z,pi_z, simoptions,Params,EntryExitParamNames);
-AggVars=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, [], simoptions, EntryExitParamNames);
+[V,Policy,ExitPolicy]=ValueFnIter_InfHorz(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
+StationaryDist=StationaryDist_InfHorz(Policy,n_d,n_a,n_z,pi_z, simoptions,Params,EntryExitParamNames);
+AggVars=EvalFnOnAgentDist_AggVars_InfHorz(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, [], simoptions, EntryExitParamNames);
 
 
 %% In lecture notes Chris Edmonds goes on to plot two graphs.

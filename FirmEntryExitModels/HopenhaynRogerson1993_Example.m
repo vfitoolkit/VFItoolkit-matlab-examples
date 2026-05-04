@@ -58,7 +58,7 @@ vfoptions.ReturnToExitFn=@(a,z,tau) -tau*a*(a~=10^6); % the exit cost is the cos
 % ReturnToExitFn=@(a, s) HopenhaynRogerson1993_ReturnToExitFn(a, s);
 
 % Check that everything is working so far by solving the value function
-[V,Policy,ExitPolicy]=ValueFnIter_Case1(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
+[V,Policy,ExitPolicy]=ValueFnIter_InfHorz(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
 
 % When tau=0 there is a cut-off value of z below which all firms exit, and which is independent of n.
 % This can be easily seen graphing the whole of the ExitPolicy, which takes
@@ -106,7 +106,7 @@ Params.zeta=1-ExitPolicy;
 
 % Check that everything is working so far by solving the simulation of agent distribution to get the stationary distribution.
 simoptions % Show which options are being set
-StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_z,pi_z,simoptions,Params,EntryExitParamNames);
+StationaryDist=StationaryDist_InfHorz(Policy,n_d,n_a,n_z,pi_z,simoptions,Params,EntryExitParamNames);
 
 % Note: When using models, such as entry and exit, where the mass of agents is not equal to 1
 % the toolkit will automatically keep track of distributions as StationaryDist.pdf and StationaryDist.mass
@@ -145,7 +145,7 @@ GEPriceParamNames={'ce','Ne'};
 FnsToEvaluate.Y = @(aprime,a,z,agentmass,alpha) z*(aprime^alpha); % Real output
 
 % Just to test: (note, is same command as usual, just need to include the optional extra inputs 'simoptions' and 'EntryExitParamNames' which contains all the needed info about entry/exit)
-AggVars=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions,EntryExitParamNames);
+AggVars=EvalFnOnAgentDist_AggVars_InfHorz(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions,EntryExitParamNames);
 
 % The general equilibrium condition is that the EV^e-ce=0.
 % This does not fit standard format for general equilibrium conditions.
@@ -164,16 +164,16 @@ n_p=0;
 disp('Calculating price vector corresponding to the stationary eqm')
 % tic;
 % NOTE: EntryExitParamNames has to be passed as an additional input compared to the standard case.
-[p_eqm,p_eqm_index, GeneralEqmCondition]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_z, n_p, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions, simoptions, vfoptions, EntryExitParamNames);
+[p_eqm,p_eqm_index, GeneralEqmCondition]=HeteroAgentStationaryEqm_InfHorz(n_d, n_a, n_z, n_p, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions, simoptions, vfoptions, EntryExitParamNames);
 % findeqmtime=toc
 
 Params.ce=p_eqm.ce;
 Params.Ne=p_eqm.Ne;
 
 %% Calculate some relevant things in eqm
-[V,Policy,ExitPolicy]=ValueFnIter_Case1(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
+[V,Policy,ExitPolicy]=ValueFnIter_InfHorz(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
 Params.zeta=1-ExitPolicy;
-StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_z,pi_z, simoptions, Params, EntryExitParamNames);
+StationaryDist=StationaryDist_InfHorz(Policy,n_d,n_a,n_z,pi_z, simoptions, Params, EntryExitParamNames);
 
 % save ./SavedOutput/HopenhaynRogerson1993.mat Params V Policy ExitPolicy StationaryDist
 
@@ -188,9 +188,9 @@ FnsToEvaluate2.Firing = @(aprime,a,z) -(aprime-a*(a~=10^6))*(aprime<a*(a~=10^6))
 % name and appear immediately after z as an input (before any other parameters)
 
 % We will want the aggregate values of these. 
-AggValues=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate2, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions,EntryExitParamNames);
+AggValues=EvalFnOnAgentDist_AggVars_InfHorz(StationaryDist, Policy, FnsToEvaluate2, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions,EntryExitParamNames);
 % For much of Panel B we just need the pdf of the relevant measure (employment, hiring, firing)
-ProbDensityFns=EvalFnOnAgentDist_pdf_Case1(StationaryDist, Policy, FnsToEvaluate2, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions,EntryExitParamNames);
+ProbDensityFns=EvalFnOnAgentDist_ProbDensityFn_InfHorz(StationaryDist, Policy, FnsToEvaluate2, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions,EntryExitParamNames);
 % We need a simulated panel based on whole distributions (for calculating
 % variance of growth rates and serial correlation in log(n); for survivors).
 % Note that because of these two moments we want to calculate it makes more
@@ -199,7 +199,7 @@ ProbDensityFns=EvalFnOnAgentDist_pdf_Case1(StationaryDist, Policy, FnsToEvaluate
 simoptions.entryinpanel=0; % Don't want entry in this panel data simulation (we are just interested in 'survivors')
 simoptions.simperiods=2;
 simoptions.numbersims=10^4;
-SimPanel=SimPanelValues_Case1(StationaryDist,Policy,FnsToEvaluate2,[],Params,n_d,n_a,n_z,d_grid,a_grid,z_grid,pi_z, simoptions, EntryExitParamNames);
+SimPanel=SimPanelValues_InfHorz(StationaryDist,Policy,FnsToEvaluate2,[],Params,n_d,n_a,n_z,d_grid,a_grid,z_grid,pi_z, simoptions, EntryExitParamNames);
 Survive_indicator=~isnan((SimPanel.Hiring(2,:)));
 SimPanel_Survivors.Employment=SimPanel.Employment(:,Survive_indicator);
 GrowthRateEmploy=(SimPanel_Survivors.Employment(2,:)-SimPanel_Survivors.Employment(1,:))./SimPanel_Survivors.Employment(1,:);
@@ -211,7 +211,7 @@ simoptions.simperiods=20; % We anyway only need 10 for the stats being reported
 simoptions.numbersims=10^4; % Default is 1000, this was not enough to get stable/smooth estimate of 'hazard rates by cohort'
 EntrantDist.pdf=Params.upsilon;
 EntrantDist.mass=Params.Ne;
-SimPanel_Entrants=SimPanelValues_Case1(EntrantDist,Policy,FnsToEvaluate2,[],Params,n_d,n_a,n_z,d_grid,a_grid,z_grid,pi_z, simoptions, EntryExitParamNames);
+SimPanel_Entrants=SimPanelValues_InfHorz(EntrantDist,Policy,FnsToEvaluate2,[],Params,n_d,n_a,n_z,d_grid,a_grid,z_grid,pi_z, simoptions, EntryExitParamNames);
 
 % plot(sort(GrowthRateEmploy(:)))
 
