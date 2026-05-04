@@ -45,7 +45,8 @@ d_grid=linspace(0,1,n_d)';
 %% Now, create the return function 
 DiscountFactorParamNames={'beta'};
 
-ReturnFn=@(d_val,aprime_val, a_val, s_val,alpha,delta,theta,tau) BasicRealBusinessCycleModel_ReturnFn(d_val,aprime_val, a_val, s_val,alpha,delta,theta,tau);
+ReturnFn=@(d_val,aprime_val, a_val, s_val,alpha,delta,theta,tau)...
+    BasicRealBusinessCycleModel_ReturnFn(d_val,aprime_val, a_val, s_val,alpha,delta,theta,tau);
 
 %% Solve
 if gpuDeviceCount>0 % If you have a GPU, we can use the full toolkit features, on CPU only basics are available
@@ -54,7 +55,7 @@ if gpuDeviceCount>0 % If you have a GPU, we can use the full toolkit features, o
 end
 
 % Do the value function iteration. Returns both the value function itself, and the optimal policy function.
-[V,Policy]=ValueFnIter_Case1(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames,[],vfoptions);
+[V,Policy]=ValueFnIter_InfHorz(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames,[],vfoptions);
 time1=toc;
 
 %% Report some output
@@ -67,7 +68,7 @@ title('Value function')
 
 %% Policy contains indexes, and because we are using vfoptions.gridinterplayer=1 is not trivial to interpret
 % So instead we can just convert it to PolicyVals which contains the values (by evaluating Policy based on the grids)
-PolicyVals=PolicyInd2Val_Case1(Policy,n_d,n_a,n_z,d_grid,a_grid,vfoptions);
+PolicyVals=PolicyInd2Val_InfHorz(Policy,n_d,n_a,n_z,d_grid,a_grid,vfoptions);
 
 %% Graph of the policy function
 

@@ -78,7 +78,8 @@ if strcmp(vfoptions.exoticpreferences,'EpsteinZin') % This if statement is only 
 end
 DiscountFactorParamNames={'beta'};
 
-ReturnFn =@(l,kprime,k,z,zeta,delta,upsilon) EpsteinZinPreferences_ReturnFn(l,kprime,k,z,zeta, delta, upsilon);
+ReturnFn =@(l,kprime,k,z,zeta,delta,upsilon)...
+    EpsteinZinPreferences_ReturnFn(l,kprime,k,z,zeta, delta, upsilon);
 
 %% Create grids
 % Create grids using CFVRRY2012 notation of l & k, then convert into VFI toolkit notation of d & a
@@ -127,7 +128,7 @@ plot(sort(s_grid))
 
 %% Now, do the value function iteration
 vfoptions.verbose=1;
-[V, Policy]=ValueFnIter_Case1(n_d,n_a,n_s,d_grid,a_grid,s_grid, pi_s, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
+[V, Policy]=ValueFnIter_InfHorz(n_d,n_a,n_s,d_grid,a_grid,s_grid, pi_s, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
 
 %% Generate output based on the solution
 
@@ -140,7 +141,7 @@ FnsToEvaluate2.l=@(l,kprime,k,z) l; % labor supply
 FnsToEvaluate2.kprime=@(l,kprime,k,z) kprime; % savings (next period assets)
 
 simoptions=struct(); % use default options
-ValuesOnGrid=EvalFnOnAgentDist_ValuesOnGrid_Case1(Policy, FnsToEvaluate2, Params, [], n_d, n_a, n_s, d_grid, a_grid, s_grid, [], simoptions);
+ValuesOnGrid=EvalFnOnAgentDist_ValuesOnGrid_InfHorz(Policy, FnsToEvaluate2, Params, [], n_d, n_a, n_s, d_grid, a_grid, s_grid, [], simoptions);
 
 figure(2)
 subplot(2,3,1), plot(k_grid,ValuesOnGrid.c(:,midpointofs))
@@ -166,7 +167,7 @@ FnsToEvaluate.y=@(l,kprime,k,z,zeta) exp(z)*(k^zeta)*(l^(1-zeta));
 FnsToEvaluate.i=@(l,kprime,k,z,delta) kprime-(1-delta)*k;
 FnsToEvaluate.Rk=@(l,kprime,k,z,zeta,delta) zeta*exp(z)*(k^(zeta-1))*(l^(1-zeta))-delta;
 
-TimeSeries=TimeSeries_Case1(Policy, FnsToEvaluate, Params, n_d, n_a, n_s, d_grid, a_grid, s_grid,pi_s,simoptions);
+TimeSeries=SimTimeSeriesValues_InfHorz(Policy, FnsToEvaluate, Params, n_d, n_a, n_s, d_grid, a_grid, s_grid,pi_s,simoptions);
 
 %% 2. Plot the Densities (Figure 3/4)
 % Not clear in CFVRRY2012 exactly how the density plots are created. I use

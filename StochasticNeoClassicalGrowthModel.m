@@ -52,7 +52,8 @@ k_grid=linspace(0,20*K_ss,n_k)'; % Grids should always be declared as column vec
 %% Now, create the return function
 DiscountFactorParamNames={'beta'};
 
-ReturnFn=@(aprime_val, a_val, s_val, gamma, alpha, delta) StochasticNeoClassicalGrowthModel_ReturnFn(aprime_val, a_val, s_val, gamma, alpha, delta);
+ReturnFn=@(aprime_val, a_val, s_val, gamma, alpha, delta)...
+    StochasticNeoClassicalGrowthModel_ReturnFn(aprime_val, a_val, s_val, gamma, alpha, delta);
 
 %% Solve
 % Do the value function iteration. Returns both the value function itself, and the optimal policy function.
@@ -65,7 +66,7 @@ if gpuDeviceCount>0 % If you have a GPU, we can use the full toolkit features, o
 end
 
 tic;
-[V, Policy]=ValueFnIter_Case1(n_d,n_k,n_z,d_grid,k_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
+[V, Policy]=ValueFnIter_InfHorz(n_d,n_k,n_z,d_grid,k_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
 time=toc;
 
 fprintf('Time to solve the value function iteration was %8.2f seconds. \n', time)
