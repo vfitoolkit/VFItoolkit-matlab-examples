@@ -141,7 +141,7 @@ Params.r=0.04;
 simoptions=struct();
 disp('Calculating price vector corresponding to the stationary eqm')
 heteroagentoptions.verbose=1;
-[p_eqm,~,GeneralEqmCondn]=HeteroAgentStationaryEqm_Case1(n_d, n_a, n_z, n_p, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions, simoptions, vfoptions);
+[p_eqm,~,GeneralEqmCondn]=HeteroAgentStationaryEqm_InfHorz(n_d, n_a, n_z, n_p, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions, simoptions, vfoptions);
 
 p_eqm
 
@@ -151,13 +151,13 @@ Params.w=(1-Params.alpha)*((p_eqm.r+Params.delta)/Params.alpha)^(Params.alpha/(P
 
 disp('Calculating various equilibrium objects')
 Params.r=p_eqm.r;
-[~,Policy]=ValueFnIter_Case1(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
+[~,Policy]=ValueFnIter_InfHorz(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
 
-% PolicyValues=PolicyInd2Val_Case1(Policy,n_d,n_a,n_z,d_grid,a_grid);
+% PolicyValues=PolicyInd2Val_InfHorz(Policy,n_d,n_a,n_z,d_grid,a_grid,vfoptions);
 
-StationaryDist=StationaryDist_Case1(Policy,n_d,n_a,n_z,pi_z, simoptions);
+StationaryDist=StationaryDist_InfHorz(Policy,n_d,n_a,n_z,pi_z, simoptions);
 
-AggVars=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid);
+AggVars=EvalFnOnAgentDist_AggVars_InfHorz(StationaryDist, Policy, FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid,simoptions);
 
 % Calculate savings rate:
 % We know production is Y=K^{\alpha}L^{1-\alpha}, and that L=1
@@ -168,24 +168,24 @@ AggVars=EvalFnOnAgentDist_AggVars_Case1(StationaryDist, Policy, FnsToEvaluate,Pa
 aggsavingsrate=Params.delta*AggVars.K.Mean^(1-Params.alpha);
 
 % Calculate Lorenz curves, Gini coefficients, and Pareto tail coefficients
-FnsToEvaluateFnIneq.Earnings = @(aprime,a,z,w) w*z;
-FnsToEvaluateFnIneq.Income = @(aprime,a,z,r,w) w*z+(1+r)*a;
-FnsToEvaluateFnIneq.Wealth = @(aprime,a,z) a;
-StationaryDist_LorenzCurves=EvalFnOnAgentDist_LorenzCurve_Case1(StationaryDist, Policy, FnsToEvaluateFnIneq, Params,[], n_d, n_a, n_z, d_grid, a_grid, z_grid);
+FnsToEvaluate_Ineq.Earnings = @(aprime,a,z,w) w*z;
+FnsToEvaluate_Ineq.Income = @(aprime,a,z,r,w) w*z+(1+r)*a;
+FnsToEvaluate_Ineq.Wealth = @(aprime,a,z) a;
+simoptions.npoints=1000; % use 1000 points for the Lorenz Curve
+AllStats=EvalFnOnAgentDist_AllStats_InfHorz(StationaryDist, Policy, FnsToEvaluate_Ineq, Params,[], n_d, n_a, n_z, d_grid, a_grid, z_grid,simoptions);
 
 % 3.5 The Distributions of Earnings and Wealth
 %  Gini for Earnings
-EarningsGini=Gini_from_LorenzCurve(StationaryDist_LorenzCurves.Earnings);
-IncomeGini=Gini_from_LorenzCurve(StationaryDist_LorenzCurves.Income);
-WealthGini=Gini_from_LorenzCurve(StationaryDist_LorenzCurves.Wealth);
+AllStats.Earnings.Gini
+AllStats.Income.Gini
+AllStats.Wealth.Gini
 
-% Calculate inverted Pareto coeff, b, from the top income shares as b=1/[log(S1%/S0.1%)/log(10)] (forgammala taken from Excel download of WTID database)
+% Calculate inverted Pareto coeff, b, from the top income shares as b=1/[log(S1%/S0.1%)/log(10)] (formula taken from Excel download of WTID database)
 % No longer used: Calculate Pareto coeff from Gini as alpha=(1+1/G)/2; ( http://en.wikipedia.org/wiki/Pareto_distribution#Lorenz_curve_and_Gini_coefficient)
 % Recalculte Lorenz curves, now with 1000 points
-StationaryDist_LorenzCurves=EvalFnOnAgentDist_LorenzCurve_Case1(StationaryDist, Policy, FnsToEvaluateFnIneq, Params,[], n_d, n_a, n_z, d_grid, a_grid, z_grid, [],1000);
-EarningsParetoCoeff=1/((log(StationaryDist_LorenzCurves.Earnings(990))/log(StationaryDist_LorenzCurves.Earnings(999)))/log(10)); %(1+1/EarningsGini)/2;
-IncomeParetoCoeff=1/((log(StationaryDist_LorenzCurves.Income(990))/log(StationaryDist_LorenzCurves.Income(999)))/log(10)); %(1+1/IncomeGini)/2;
-WealthParetoCoeff=1/((log(StationaryDist_LorenzCurves.Wealth(990))/log(StationaryDist_LorenzCurves.Wealth(999)))/log(10)); %(1+1/WealthGini)/2;
+EarningsParetoCoeff=1/((log(AllStats.Earnings.LorenzCurve(990))/log(AllStats.Earnings.LorenzCurve(999)))/log(10));
+IncomeParetoCoeff=1/((log(AllStats.Income.LorenzCurve(990))/log(AllStats.Income.LorenzCurve(999)))/log(10));
+WealthParetoCoeff=1/((log(AllStats.Wealth.LorenzCurve(990))/log(AllStats.Wealth.LorenzCurve(999)))/log(10));
 
 
 %% Display some output about the solution
