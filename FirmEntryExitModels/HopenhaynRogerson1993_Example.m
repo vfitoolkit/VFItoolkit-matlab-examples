@@ -140,9 +140,11 @@ title('Stationary Distribution over lagged employment (sum/integral over z)')
 %Use the toolkit to find the equilibrium prices
 GEPriceParamNames={'ce','Ne'};
 
-% Note: With entry-exit the mass of the distribution of agents often
-% matters. So it becomes an extra input arguement in all functions to be evaluated.
+% Note: With entry-exit the mass of the distribution of agents often matters. 
+% It is possible to use the 'agentmass' extra input argument in all functions to be evaluated.
+% If you want to use 'agentmass' as an input to FnsToEvaluate, it must be after the action space but before any of the parameters
 FnsToEvaluate.Y = @(aprime,a,z,agentmass,alpha) z*(aprime^alpha); % Real output
+% Note: agentmass does nothing in Y, just put it there to demonstate how it can be used.
 
 % Just to test: (note, is same command as usual, just need to include the optional extra inputs 'simoptions' and 'EntryExitParamNames' which contains all the needed info about entry/exit)
 AggVars=EvalFnOnAgentDist_AggVars_InfHorz(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions,EntryExitParamNames);
