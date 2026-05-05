@@ -155,9 +155,9 @@ AggVars=EvalFnOnAgentDist_AggVars_InfHorz(StationaryDist, Policy, FnsToEvaluate,
 aggsavingsrate=Params.delta*(AggVars.K.Mean/AggVars.L.Mean)^(1-Params.alpha);
 
 % Calculate Lorenz curves, Gini coefficients, and Pareto tail coefficients
-FnsToEvaluateFnIneq.Earnings = @(d,aprime,a,z,w) w*z;
-FnsToEvaluateFnIneq.Income = @(d,aprime,a,z,r,w) w*z+(1+r)*a;
-FnsToEvaluateFnIneq.Wealth = @(d,aprime,a,z) a;
+FnsToEvaluate_Ineq.Earnings = @(d,aprime,a,z,w) w*z;
+FnsToEvaluate_Ineq.Income = @(d,aprime,a,z,r,w) w*z+(1+r)*a;
+FnsToEvaluate_Ineq.Wealth = @(d,aprime,a,z) a;
 simoptions.npoints=1000; % use 1000 points for the Lorenz Curve
 AllStats=EvalFnOnAgentDist_AllStats_InfHorz(StationaryDist, Policy, FnsToEvaluate_Ineq, Params,[], n_d, n_a, n_z, d_grid, a_grid, z_grid,simoptions);
 
