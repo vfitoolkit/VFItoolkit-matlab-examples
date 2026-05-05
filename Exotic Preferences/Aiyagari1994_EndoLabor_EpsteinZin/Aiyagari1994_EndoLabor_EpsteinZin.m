@@ -41,15 +41,19 @@ vfoptions.EZeis='psi';
 % 3. Minor adjustment to 'return function'.
 % See from line 121
 
+% Note: changed beta, otherwise people saved so many assets no-one bothered
+% working (could alternatively have changed utility fn to balance leisure
+% and consumption)
+
 %% Set some basic variables
 
-n_l=21;
-n_k=2^9;
+n_d=21;
+n_a=2^9;
 n_z=21;
 n_p=0; % Normally you will want n_p=0, setting a non-zero value here activates the use of a grid on prices.
 
 %Parameters
-Params.beta=0.96; %Model period is one-sixth of a year
+Params.beta=0.9; %Model period is one-sixth of a year
 Params.alpha=0.36;
 Params.delta=0.08;
 Params.chi=0.9;
@@ -78,26 +82,16 @@ r_ss=1/Params.beta-1;
 K_ss=((r_ss+Params.delta)/Params.alpha)^(1/(Params.alpha-1)); %The steady state capital in the absence of aggregate uncertainty.
 
 % Set grid for asset holdings
-k_grid=15*K_ss*(linspace(0,1,n_k).^3)'; % The ^3 means most points are near zero, which is where the derivative of the value fn changes most.
+a_grid=15*K_ss*(linspace(0,1,n_a).^3)'; % The ^3 means most points are near zero, which is where the derivative of the value fn changes most.
 
 % Set grid for endogenous labor
-l_grid=linspace(0,1,n_l)';
+d_grid=linspace(0,1,n_d)';
 
-%Bring model into the notational conventions used by the toolkit
-d_grid=l_grid; %There is no d variable
-a_grid=k_grid;
-%pi_z;
-%z_grid
+%% Create descriptions of functions to evaluate
+FnsToEvaluate.K = @(l,aprime,a,z) a; % Aggregate assets
+FnsToEvaluate.L = @(l,aprime,a,z) l; % Aggregate labor supply
 
-n_d=n_l;
-n_a=n_k;
-%n_z
-
-%Create descriptions of functions to evaluate
-FnsToEvaluate.K = @(d,aprime,a,z) a; % Aggregate assets (which is this periods state)
-FnsToEvaluate.L = @(d,aprime,a,z) d; % Aggregate labor supply
-
-%Now define the functions for the General Equilibrium conditions
+%% Now define the functions for the General Equilibrium conditions
     %Should be written as LHS of general eqm eqn minus RHS, so that 
     %the closer the value given by the function is to zero, the closer 
     %the general eqm condition is to holding.
@@ -106,11 +100,12 @@ GeneralEqmEqns.CapitalMarket = @(K,L,r,alpha,delta) r-(alpha*(K^(alpha-1))*(L^(1
 GeneralEqmEqns.LaborMarket = @(K,L,w,alpha) w-((1-alpha)*(K^(alpha))*(L^(-alpha))); %The requirement that the wage corresponds to marginal product of labor
 
 %%
-% Set the discount parameters for Epstein-Zin 
-DiscountFactorParamNames={'beta','gamma','psi'}; % The 'Epstein-Zin parameters' must be the last two of the discount factor parameters.
+% Set the discount parameters
+DiscountFactorParamNames={'beta'};
+
 % Set the return function for Epstein-Zin
-ReturnFn=@(d,aprime, a, z,chi,r,w)... 
-    Aiyagari1994_EndoLabor_EpsteinZin_ReturnFn(d,aprime, a, z,chi,r,w);
+ReturnFn=@(l,aprime, a, z,chi,r,w)... 
+    Aiyagari1994_EndoLabor_EpsteinZin_ReturnFn(l,aprime, a, z,chi,r,w);
 
 %%
 
@@ -134,14 +129,23 @@ p_eqm
 disp('Calculating various equilibrium objects')
 Params.r=p_eqm.r;
 Params.w=p_eqm.w;
-[~,Policy]=ValueFnIter_InfHorz(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
+[V,Policy]=ValueFnIter_InfHorz(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
 
-% PolicyValues=PolicyInd2Val_InfHorz(Policy,n_d,n_a,n_z,d_grid,a_grid,vfoptions);
+PolicyValues=PolicyInd2Val_InfHorz(Policy,n_d,n_a,n_z,d_grid,a_grid,vfoptions);
+
+figure(1)
+subplot(2,1,1); plot(a_grid,PolicyValues(1,:,1),a_grid,PolicyValues(1,:,ceil(n_z/2)),a_grid,PolicyValues(1,:,end))
+title('Policy: l')
+legend('min z','median z','max z')
+subplot(2,1,2); plot(a_grid,PolicyValues(2,:,1),a_grid,PolicyValues(2,:,ceil(n_z/2)),a_grid,PolicyValues(2,:,end))
+title('Policy: aprime')
+legend('min z','median z','max z')
 
 StationaryDist=StationaryDist_InfHorz(Policy,n_d,n_a,n_z,pi_z, simoptions);
 
 AggVars=EvalFnOnAgentDist_AggVars_InfHorz(StationaryDist, Policy, FnsToEvaluate,Params, [],n_d, n_a, n_z, d_grid, a_grid,z_grid,simoptions);
 
+%%
 
 % Calculate savings rate:
 % We know production is Y=K^{\alpha}L^{1-\alpha}.
