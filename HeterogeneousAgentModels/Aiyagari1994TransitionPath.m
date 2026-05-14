@@ -131,7 +131,7 @@ p_eqm_final % The equilibrium values of the GE prices
 Params.r=p_eqm_final.r;
 [V_final,Policy_final]=ValueFnIter_InfHorz(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn,Params, DiscountFactorParamNames,[],vfoptions);
 
-StationaryDist_final=StationaryDist_InfHorz(Policy_final,n_d,n_a,n_z,pi_z);
+StationaryDist_final=StationaryDist_InfHorz(Policy_final,n_d,n_a,n_z,pi_z,simoptions);
 AggVars_final=EvalFnOnAgentDist_AggVars_InfHorz(StationaryDist_final, Policy_final, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid,simoptions);
 
 % surf(k_grid*ones(1,n_s),ones(n_a,1)*s_grid',V_final)
@@ -161,7 +161,7 @@ transpathoptions.GEnewprice=3;
 % Need to explain to transpathoptions how to use the GeneralEqmEqns to
 % update the general eqm transition prices (in PricePath).
 transpathoptions.GEnewprice3.howtoupdate=... % a row is: GEcondn, price, add, factor
-    {'CaptialMarket','r',0,0.2}; % CaptialMarket GE condition will be positive if r is too big, so subtract
+    {'CapitalMarket','r',0,0.2}; % CapitalMarket GE condition will be positive if r is too big, so subtract
 % Note: the update is essentially new_price=price+factor*add*GEcondn_value-factor*(1-add)*GEcondn_value
 % Notice that this adds factor*GEcondn_value when add=1 and subtracts it what add=0
 % A small 'factor' will make the convergence to solution take longer, but too large a value will make it 
@@ -178,7 +178,7 @@ transpathoptions.verbose=1;
 vfoptionspath=vfoptions;
 vfoptionspath.divideandconquer=1;
 
-[PricePath,GeneralEqmCondnPath]=TransitionPath_InfHorz(PricePath0, ParamPath, T, V_final, StationaryDist_init, n_d, n_a, n_z, d_grid,a_grid,z_grid, pi_z, ReturnFn, FnsToEvaluate, TransPathGeneralEqmEqns, Params, DiscountFactorParamNames, transpathoptions,vfoptionspath,simoptions);
+[PricePath,GeneralEqmCondnPath]=TransitionPath_InfHorz(PricePath0, ParamPath, T, V_final, StationaryDist_init, n_d, n_a, n_z, d_grid,a_grid,z_grid, pi_z, ReturnFn, FnsToEvaluate, TransPathGeneralEqmEqns, Params, DiscountFactorParamNames, transpathoptions,simoptions,vfoptionspath);
 
 figure(1)
 plot(0:1:T, [p_eqm_init.r,PricePath.r])
@@ -187,7 +187,7 @@ title('interest rate path for transtion')
 %% Look at results
 [VPath,PolicyPath]=ValueFnOnTransPath_InfHorz(PricePath, ParamPath, T, V_final, Policy_final, Params, n_d, n_a, n_z, d_grid,a_grid,z_grid, pi_z, DiscountFactorParamNames, ReturnFn, transpathoptions, vfoptionspath);
 
-AgentDistPath=AgentDistOnTransPath_InfHorz(StationaryDist_init, PolicyPath,n_d,n_a,n_z,pi_z,T,simoptions);
+AgentDistPath=AgentDistOnTransPath_InfHorz(StationaryDist_init, PricePath, ParamPath, PolicyPath, n_d, n_a, n_z, pi_z, T, Params, simoptions);
 
 AggVarsPath=EvalFnOnTransPath_AggVars_InfHorz(FnsToEvaluate,AgentDistPath,PolicyPath,PricePath,ParamPath, Params, T, n_d, n_a, n_z, d_grid, a_grid,z_grid,simoptions);
 

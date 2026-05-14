@@ -164,7 +164,7 @@ FnsToEvaluate.Y = @(d, aprime,a,z,alpha) z*(d^alpha); % Total output
 % mass, and this is automatically used internally to make all relevant
 % changes to the algorithms)
 simoptions.keeppolicyonexit=1; % Is not needed for simulation, but is needed for EvalFnOnAgentDist.
-AggVars=EvalFnOnAgentDist_AggVars_InfHorz(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, [], simoptions, EntryExitParamNames);
+AggVars=EvalFnOnAgentDist_AggVars_InfHorz(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions, EntryExitParamNames);
 
 % The general equilibrium condition is that the EV^e-ce=0.
 % This does not fit standard format for general equilibrium conditions.
@@ -196,7 +196,7 @@ Params.Ne=p_eqm_initial.Ne;
 %% Now that we have the general eqm, we need to compute the value function, etc. in this eqm
 [V,Policy,ExitPolicy]=ValueFnIter_InfHorz(n_d,n_a,n_z,d_grid,a_grid,z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [], vfoptions);
 StationaryDist=StationaryDist_InfHorz(Policy,n_d,n_a,n_z,pi_z, simoptions,Params,EntryExitParamNames);
-AggVars=EvalFnOnAgentDist_AggVars_InfHorz(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, [], simoptions, EntryExitParamNames);
+AggVars=EvalFnOnAgentDist_AggVars_InfHorz(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions, EntryExitParamNames);
 
 
 %% In lecture notes Chris Edmonds goes on to plot two graphs.

@@ -254,7 +254,7 @@ GeneralEqmEqns.labormarket = @(w,K,L,A,alpha) w-A*(1-alpha)*(K^(alpha))*(L^(-alp
 
 %% Test
 disp('Test AggVars')
-AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,[],simoptions);
+AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,simoptions);
 
 %% Calculate the general equilibrium
 heteroagentoptions.verbose=1; % Give info on how the General eqm conditions are going
@@ -269,14 +269,14 @@ Params.Tr_beq=p_eqm.Tr_beq;
 [V, Policy]=ValueFnIter_Case1_FHorz(n_d,n_a,n_z,N_j, d_grid, a_grid, z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, [],vfoptions);
 StationaryDist=StationaryDist_FHorz_Case1(jequaloneDist,AgeWeightsParamNames,Policy,n_d,n_a,n_z,N_j,pi_z,Params,simoptions);
 
-AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,[],simoptions);
+AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,simoptions);
 
 FnsToEvaluate2.K = @(d,aprime,a,z) a; % Aggregate assets K
 FnsToEvaluate2.N = @(d,aprime,a,z,I_j,h,epsilon_j) I_j*h*d*epsilon_j*z; % Aggregate effective labour supply (in efficiency units), I1998 calls this N
 FnsToEvaluate2.C = @(d,aprime,a,z,r,w,tau_u, tau_s,h,zeta,theta,epsilon_j,I_j,SSdivw, Tr_beq,workinglifeincome,g,agej,MedicalShock,LumpSum) ImrohorogluImrohorogluJoines1995_EndoLabor_ConsumptionFn(d,aprime,a,z,r,w,tau_u, tau_s,h,zeta,theta,epsilon_j,I_j,SSdivw, Tr_beq,workinglifeincome,g,agej,MedicalShock,LumpSum);
 FnsToEvaluate2.Income = @(d,aprime,a,z,w,h,zeta, epsilon_j,I_j,SSdivw, Tr_beq,workinglifeincome,g,agej) ImrohorogluImrohorogluJoines1995_EndoLabor_IncomeFn(d,aprime,a,z,w,h,zeta, epsilon_j,I_j,SSdivw, Tr_beq,workinglifeincome,g,agej);
 
-AggVars2=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate2, Params, [], n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,[],simoptions);
+AggVars2=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate2, Params, [], n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,simoptions);
 
 K=AggVars2.K.Mean;
 N=AggVars2.N.Mean;
@@ -294,7 +294,7 @@ fprintf('Average Utility (value fn): %8.3f \n ', sum(sum(sum(V.*StationaryDist))
 fprintf('K/Q: %8.3f \n ', K/Q);
 
 %% Some life-cycle profiles for income, consumption, and assets
-LifeCycleProfiles=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvaluate2,[],Params,n_d,n_a,n_z,N_j,d_grid,a_grid,z_grid,simoptions);
+LifeCycleProfiles=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvaluate2,Params,[],n_d,n_a,n_z,N_j,d_grid,a_grid,z_grid,simoptions);
 % (this creates much more than just the 'age conditional mean' profiles that we use here)
 % (Note: when productivity growth is non-zero then you would need to correct some of these)
 % I have assumed income includes capital income, unemployment benefits and
@@ -304,12 +304,12 @@ LifeCycleProfiles=LifeCycleProfiles_FHorz_Case1(StationaryDist,Policy,FnsToEvalu
 % social security benefits.
 
 %% To create Figures 6 and 7 you would also need the value of assets on the grid
-ValuesOnGrid=EvalFnOnAgentDist_ValuesOnGrid_FHorz_Case1(Policy, FnsToEvaluate2, Params, [], n_d, n_a, n_z, N_j, d_grid, a_grid, z_grid,[],simoptions);
+ValuesOnGrid=EvalFnOnAgentDist_ValuesOnGrid_FHorz_Case1(Policy, FnsToEvaluate2, Params, [], n_d, n_a, n_z, N_j, d_grid, a_grid, z_grid,simoptions);
 
 %% With endogenous labor, let's also take a look at what fraction of the population is not working (is 0.06 in IIJ1995 with exogenous labor)
 FnsToEvaluate3.l0 = @(d,aprime,a,z) (d==0); % Not working
 
-FractionOfPopulationNotWorking=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate3, Params, [], n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,[],simoptions);
+FractionOfPopulationNotWorking=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate3, Params, [], n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,simoptions);
 
 FractionOfPopulationNotWorking.l0.Mean
 % Note that if doing this endogenous labor model more seriously we would choose chi and theta to target this.

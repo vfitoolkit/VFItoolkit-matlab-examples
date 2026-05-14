@@ -141,7 +141,7 @@ FnsToEvaluate2.l=@(l,kprime,k,z) l; % labor supply
 FnsToEvaluate2.kprime=@(l,kprime,k,z) kprime; % savings (next period assets)
 
 simoptions=struct(); % use default options
-ValuesOnGrid=EvalFnOnAgentDist_ValuesOnGrid_InfHorz(Policy, FnsToEvaluate2, Params, [], n_d, n_a, n_s, d_grid, a_grid, s_grid, [], simoptions);
+ValuesOnGrid=EvalFnOnAgentDist_ValuesOnGrid_InfHorz(Policy, FnsToEvaluate2, Params, [], n_d, n_a, n_s, d_grid, a_grid, s_grid, simoptions);
 
 figure(2)
 subplot(2,3,1), plot(k_grid,ValuesOnGrid.c(:,midpointofs))

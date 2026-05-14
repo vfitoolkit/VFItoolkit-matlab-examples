@@ -42,7 +42,7 @@ end
 StationaryDist=StationaryDist_FHorz_Case1(jequaloneDist,AgeWeightsParamNames,Policy,n_d,n_a,n_z,N_j,pi_z,Params,simoptions);
 
 % Calculate the general eqm conditions
-AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,[],simoptions);
+AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,simoptions);
 
 AggVarNames=fieldnames(AggVars); % Using GeneralEqmEqns as a struct presupposes using FnsToEvaluate (and hence AggVars) as a stuct
 for ii=1:length(AggVarNames)
@@ -52,7 +52,7 @@ GeneralEqmConditionsVec=real(GeneralEqmConditions_Case1_v2(GeneralEqmEqns, Param
 
 % Calculate absOmega0minusOmega1
 FnsToEvaluate3.Utility=FnsToEvaluate2.Utility;% Only use FnsToEvaluate2.Utility in ValuesOnGrid, just to speed things up
-ValuesOnGrid=EvalFnOnAgentDist_ValuesOnGrid_FHorz_Case1(Policy, FnsToEvaluate3, Params, [], n_d, n_a, n_z, N_j, d_grid, a_grid, z_grid,[],simoptions);
+ValuesOnGrid=EvalFnOnAgentDist_ValuesOnGrid_FHorz_Case1(Policy, FnsToEvaluate3, Params, [], n_d, n_a, n_z, N_j, d_grid, a_grid, z_grid,simoptions);
 UtilityOnGrid=ValuesOnGrid.Utility(:,:,:);
 discountongrid=shiftdim(cumprod(Params.beta*Params.sj),-1);
 AgeConditionalStationaryDist=StationaryDist./sum(sum(StationaryDist,1),2);

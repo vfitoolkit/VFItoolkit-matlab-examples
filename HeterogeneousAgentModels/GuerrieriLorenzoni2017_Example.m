@@ -144,7 +144,7 @@ GEPriceParamNames={'r'}; %,'tau'
 
 heteroagentoptions.verbose=1;
 disp('Calculating price vector corresponding to the stationary eqm')
-[p_eqm_initial,GeneralEqmCondn_initial]=HeteroAgentStationaryEqm_InfHorz(n_d, n_a, n_z, 0, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions,vfoptions,simoptions);
+[p_eqm_initial,GeneralEqmCondn_initial]=HeteroAgentStationaryEqm_InfHorz(n_d, n_a, n_z, 0, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions,simoptions,vfoptions);
 
 Params.r=p_eqm_initial.r;
 Params_initial=Params; 
@@ -175,7 +175,7 @@ AggVars_initial=EvalFnOnAgentDist_AggVars_InfHorz(StationaryDist_initial, Policy
 %% Final stationary equilibrium
 Params.phi=Params.phi_final;
 
-[p_eqm_final,GeneralEqmCondn_final]=HeteroAgentStationaryEqm_InfHorz(n_d, n_a, n_z, 0, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions,vfoptions,simoptions);
+[p_eqm_final,GeneralEqmCondn_final]=HeteroAgentStationaryEqm_InfHorz(n_d, n_a, n_z, 0, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, [], [], [], GEPriceParamNames,heteroagentoptions,simoptions,vfoptions);
 
 Params.r=p_eqm_final.r;
 Params_final=Params;
@@ -306,7 +306,7 @@ transpathoptions.verbose=1;
 vfoptionspath=vfoptions;
 vfoptionspath.divideandconquer=1;
 
-[PricePath,GeneralEqmCondnPath]=TransitionPath_InfHorz(PricePath0, ParamPath, T, V_final, StationaryDist_initial, n_d, n_a, n_z, d_grid,a_grid,z_grid, pi_z, ReturnFn, FnsToEvaluate, TransPathGeneralEqmEqns, Params, DiscountFactorParamNames, transpathoptions, vfoptionspath, simoptions);
+[PricePath,GeneralEqmCondnPath]=TransitionPath_InfHorz(PricePath0, ParamPath, T, V_final, StationaryDist_initial, n_d, n_a, n_z, d_grid,a_grid,z_grid, pi_z, ReturnFn, FnsToEvaluate, TransPathGeneralEqmEqns, Params, DiscountFactorParamNames, transpathoptions, simoptions, vfoptionspath);
 
 % For later we will keep another copy
 PricePath_Flex=PricePath;
@@ -314,7 +314,7 @@ PricePath_Flex=PricePath;
 % Now that we have the transition, calculate the value and policy functions for the transition path
 [VPath,PolicyPath]=ValueFnOnTransPath_InfHorz(PricePath, ParamPath, T, V_final, Policy_final, Params, n_d, n_a, n_z, d_grid, a_grid,z_grid, pi_z, DiscountFactorParamNames, ReturnFn, transpathoptions, vfoptionspath);
 % You can then use these to calculate the agent distribution for the transition path
-AgentDistPath=AgentDistOnTransPath_InfHorz(StationaryDist_initial,PolicyPath,n_d,n_a,n_z,pi_z,T,simoptions);
+AgentDistPath=AgentDistOnTransPath_InfHorz(StationaryDist_initial, PricePath, ParamPath, PolicyPath, n_d, n_a, n_z, pi_z, T, Params, simoptions);
 
 save GL2017A.mat
 
@@ -370,13 +370,13 @@ AggVars_initial=EvalFnOnAgentDist_AggVars_InfHorz(StationaryDist_initial, Policy
 AggVarsPath_GE=EvalFnOnTransPath_AggVars_InfHorz(Fig5FnsToEvaluate,AgentDistPath,PolicyPath,PricePath, ParamPath, Params, T, n_d, n_a, n_z, d_grid, a_grid,z_grid,simoptions);
 % Only debt limit reduction path
 UnchangedPricePath.r=p_eqm_initial.r*ones(1,T);
-[~,PolicyPath_partial_onlydebtlimit]=ValueFnOnTransPath_InfHorz(UnchangedPricePath, ParamPath, T, V_final, Policy_final, Params, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, transpathoptions,vfoptionspath);
-AgentDistPath_partial_onlydebtlimit=AgentDistOnTransPath_InfHorz(StationaryDist_initial, PolicyPath_partial_onlydebtlimit,n_d,n_a,n_z,pi_z,T,simoptions);
+[~,PolicyPath_partial_onlydebtlimit]=ValueFnOnTransPath_InfHorz(UnchangedPricePath, ParamPath, T, V_final, Policy_final, Params, n_d, n_a, n_z, d_grid, a_grid, z_grid, pi_z, DiscountFactorParamNames, ReturnFn, transpathoptions, vfoptionspath);
+AgentDistPath_partial_onlydebtlimit=AgentDistOnTransPath_InfHorz(StationaryDist_initial, UnchangedPricePath, ParamPath, PolicyPath_partial_onlydebtlimit, n_d, n_a, n_z, pi_z, T, Params, simoptions);
 AggVarsPath_partial_onlydebtlimit=EvalFnOnTransPath_AggVars_InfHorz(Fig5FnsToEvaluate,AgentDistPath_partial_onlydebtlimit,PolicyPath_partial_onlydebtlimit,UnchangedPricePath, ParamPath, Params, T, n_d, n_a, n_z, d_grid, a_grid,z_grid, simoptions);
 % Only interest rate path
 UnchangedParamPath.phi=Params.phi_initial*ones(1,T);
-[~,PolicyPath_partial_onlyinterestrate]=ValueFnOnTransPath_InfHorz(PricePath, UnchangedParamPath, T, V_final, Policy_final, Params, n_d, n_a, n_z, pi_z, d_grid, a_grid,z_grid, DiscountFactorParamNames, ReturnFn, transpathoptions,vfoptionspath);
-AgentDistPath_partial_onlyinterestrate=AgentDistOnTransPath_InfHorz(StationaryDist_initial, PolicyPath_partial_onlyinterestrate,n_d,n_a,n_z,pi_z,T,simoptions);
+[~,PolicyPath_partial_onlyinterestrate]=ValueFnOnTransPath_InfHorz(PricePath, UnchangedParamPath, T, V_final, Policy_final, Params, n_d, n_a, n_z, d_grid, a_grid, z_grid, pi_z, DiscountFactorParamNames, ReturnFn, transpathoptions, vfoptionspath);
+AgentDistPath_partial_onlyinterestrate=AgentDistOnTransPath_InfHorz(StationaryDist_initial, PricePath, UnchangedParamPath, PolicyPath_partial_onlyinterestrate, n_d, n_a, n_z, pi_z, T, Params, simoptions);
 AggVarsPath_partial_onlyinterestrate=EvalFnOnTransPath_AggVars_InfHorz(Fig5FnsToEvaluate,AgentDistPath_partial_onlyinterestrate,PolicyPath_partial_onlyinterestrate,PricePath, UnchangedParamPath, Params, T, n_d, n_a,n_z, d_grid, a_grid,z_grid, simoptions);
 
 AggVarsPath_GE_pch=100*(AggVarsPath_GE.Consumption.Mean-AggVars_initial.Consumption.Mean)./AggVars_initial.Consumption.Mean;
@@ -515,12 +515,12 @@ transpathoptions.weightscheme=1; % This is anyway the default
 transpathoptions.verbose=1;
 transpathoptions.tolerance=10^(-4); % will run until r and omega settle to four digits
 
-[PricePath_NK,GeneralEqmCondnPath_NK]=TransitionPath_InfHorz(PricePath0, ParamPath, T, V_final, StationaryDist_initial, n_d, n_a, n_z, d_grid,a_grid,z_grid, pi_z, ReturnFn,  FnsToEvaluate, TransPathGeneralEqmEqns_sticky, Params, DiscountFactorParamNames, transpathoptions, vfoptionspath, simoptions);
+[PricePath_NK,GeneralEqmCondnPath_NK]=TransitionPath_InfHorz(PricePath0, ParamPath, T, V_final, StationaryDist_initial, n_d, n_a, n_z, d_grid,a_grid,z_grid, pi_z, ReturnFn,  FnsToEvaluate, TransPathGeneralEqmEqns_sticky, Params, DiscountFactorParamNames, transpathoptions, simoptions, vfoptionspath);
 
 % Now that we have the transition, calculate the value and policy functions for the transition path
 [VPath_NK,PolicyPath_NK]=ValueFnOnTransPath_InfHorz(PricePath_NK, ParamPath, T, V_final, Policy_final, Params, n_d, n_a, n_z, d_grid,a_grid,z_grid, pi_z, DiscountFactorParamNames, ReturnFn, transpathoptions, vfoptionspath);
 % You can then use these to calculate the agent distribution for the transition path
-AgentDistPath_NK=AgentDistOnTransPath_InfHorz(StationaryDist_initial, PolicyPath_NK,n_d,n_a,n_z,pi_z,T, simoptions);
+AgentDistPath_NK=AgentDistOnTransPath_InfHorz(StationaryDist_initial, PricePath_NK, ParamPath, PolicyPath_NK, n_d, n_a, n_z, pi_z, T, Params, simoptions);
 
 save GL2017B.mat
 

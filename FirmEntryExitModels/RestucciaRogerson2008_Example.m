@@ -259,7 +259,7 @@ StationaryDist=StationaryDist_InfHorz(Policy,n_d,n_a,n_z,pi_z, simoptions, Param
 
 % Impose the labour market clearance, which involves calculating Ne. See comments above (about 10-20 lines above).
 FnsToEvaluate.nbar = @(aprime,a,z1,z2,agentmass,alpha,gamma,r,w,taurate,subsidyrate) ((1-((z2>=0)*taurate+(z2<0)*subsidyrate)*z2)*z1)^(1/(1-alpha-gamma)) *(alpha/r)^(alpha/(1-gamma-alpha)) *(gamma/w)^((1-alpha)/(1-gamma-alpha)); % which evaluates to Nbar in the aggregate
-AggValues=EvalFnOnAgentDist_AggVars_InfHorz(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, [], simoptions, EntryExitParamNames);
+AggValues=EvalFnOnAgentDist_AggVars_InfHorz(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z, d_grid, a_grid, z_grid, simoptions, EntryExitParamNames);
 InitialNe=Params.Ne;
 Params.Ne=1/AggValues.nbar.Aggregate; % AggValues is presently equal to Nbar. This line is imposing/satisfying the labour market clearance condition.
 StationaryDist.mass=StationaryDist.mass*(Params.Ne/InitialNe); % Take advantage of linearity of the stationary distribution in new entrants distribution.

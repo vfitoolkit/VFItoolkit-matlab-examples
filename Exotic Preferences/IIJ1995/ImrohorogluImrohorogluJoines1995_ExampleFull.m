@@ -213,7 +213,7 @@ GeneralEqmEqns.Bequests = @(Tr_beq,Tr) Tr_beq-Tr; % Equation (17): Accidental be
 
 %% Test
 disp('Test AggVars')
-AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,[],simoptions);
+AggVars=EvalFnOnAgentDist_AggVars_FHorz_Case1(StationaryDist, Policy, FnsToEvaluate, Params, [], n_d, n_a, n_z,N_j, d_grid, a_grid, z_grid,simoptions);
 
 %% Calculate the general equilibrium
 heteroagentoptions.verbose=1; % Give info on how the General eqm conditions are going
