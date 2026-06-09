@@ -48,7 +48,10 @@ AggVarNames=fieldnames(AggVars); % Using GeneralEqmEqns as a struct presupposes 
 for ii=1:length(AggVarNames)
     Params.(AggVarNames{ii})=AggVars.(AggVarNames{ii}).Mean;
 end
-GeneralEqmConditionsVec=real(GeneralEqmConditions_Case1_v2(GeneralEqmEqns, Params));
+% Manually evaluate GeneralEqmEqns_Omega0 (Bequests and capital market)
+GeneralEqmConditionsVec=zeros(1,2);
+GeneralEqmConditionsVec(1)=Params.Tr_beq-Params.Tr; % Bequests:      Tr_beq - Tr
+GeneralEqmConditionsVec(2)=Params.r-(Params.A*Params.alpha*Params.K^(Params.alpha-1)*Params.N^(1-Params.alpha)-Params.delta); % Capital market: r - MPK
 
 % Calculate absOmega0minusOmega1
 FnsToEvaluate3.Utility=FnsToEvaluate2.Utility;% Only use FnsToEvaluate2.Utility in ValuesOnGrid, just to speed things up
